@@ -80,8 +80,8 @@ function modifyPost(post, fields) {
 			}
 		}
 
-		if (typeof post.post_type === 'undefined' || post.post_type === null) {
-			post.post_type = Posts.DEFAULT_POST_TYPE;
+		if (typeof post.postType === 'undefined' || post.postType === null) {
+			post.postType = Posts.DEFAULT_POST_TYPE;
 		}
 	}
 }

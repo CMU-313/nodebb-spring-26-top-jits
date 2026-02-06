@@ -220,8 +220,8 @@ module.exports = function (Posts) {
 			editPostData.timestamp = data.timestamp;
 		}
 
-		if (Posts.isValidPostType(data.post_type)) {
-			editPostData.post_type = Posts.normalizePostType(data.post_type);
+		if (Posts.isValidPostType(data.postType)) {
+			editPostData.postType = Posts.normalizePostType(data.postType);
 		}
 
 		return editPostData;
