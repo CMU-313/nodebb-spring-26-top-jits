@@ -301,6 +301,82 @@ describe('Post\'s', () => {
 		});
 	});
 
+	describe('post types', () => {
+		it('should create a post with default post type', async () => {
+			const ownerUid = await user.create({ username: 'owner user' });
+			const topic = await topics.post({
+				uid: ownerUid,
+				cid,
+				title: 'Topic for post type testing',
+				content: 'Some text here for the OP',
+			});
+			const pid = topic.postData.pid;
+			const postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'post');
+		});
+
+		it('should create a post with question post type', async () => {
+			const ownerUid = await user.create({ username: 'owner user' });
+			const topic = await topics.post({
+				uid: ownerUid,
+				cid,
+				title: 'Topic for question post type testing',
+				content: 'Some text here for the OP',
+				postType: 'question',
+			});
+			const pid = topic.postData.pid;
+			const postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'question');
+		});
+		
+		it('should create a post with post as the post type', async () => {
+			const ownerUid = await user.create({ username: 'owner user' });
+			const topic = await topics.post({
+				uid: ownerUid,
+				cid,
+				title: 'Topic for question post type testing',
+				content: 'Some text here for the OP',
+				postType: 'post',
+			});
+			const pid = topic.postData.pid;
+			const postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'post');
+		});
+
+		it('should create a post with default post type if post type is invalid', async () => {
+			const ownerUid = await user.create({ username: 'owner user' });
+			const topic = await topics.post({
+				uid: ownerUid,
+				cid,
+				title: 'Topic for question post type testing',
+				content: 'Some text here for the OP',
+				postType: 'invalid_postType',
+			});
+			const pid = topic.postData.pid;
+			const postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'post');
+		});
+
+		it('should update the post type upon edit', async () => {
+			const uid = await user.create({ username: 'owner user'});
+			const topic = await topics.post({
+				uid: uid,
+				cid,
+				title: 'Topic for question post type editing testing',
+				content: 'Some text here for the OP',
+				postType: 'post',
+			});
+			const pid = topic.postData.pid;
+			let postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'post');
+			const content = topic.postData.content;
+			
+			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'question' });
+			postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'question');
+		});
+	});
+
 	describe('delete/restore/purge', () => {
 		async function createTopicWithReply() {
 			const topicPostData = await topics.post({
