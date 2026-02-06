@@ -155,7 +155,7 @@ PostObject:
       type: boolean
     replies:
       type: number
-    post_type:
+    postType:
       type: string
       description: The type of post
       enum: [post, question]
