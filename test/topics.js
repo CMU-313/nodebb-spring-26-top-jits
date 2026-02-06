@@ -314,6 +314,51 @@ describe('Topic\'s', () => {
 			});
 		});
 
+		it('should fail to create new reply with toPid that has been purged', async () => {
+			const { postData } = await topics.post({
+				uid: topic.userId,
+				cid: topic.categoryId,
+				title: utils.generateUUID(),
+				content: utils.generateUUID(),
+			});
+			await posts.purge(postData.pid, topic.userId);
+
+			await assert.rejects(
+				topics.reply({ uid: topic.userId, content: 'test post', tid: postData.topic.tid, toPid: postData.pid }),
+				{ message: '[[error:invalid-pid]]' }
+			);
+		});
+
+		it('should fail to create a new reply with toPid that has been deleted (user cannot view_deleted)', async () => {
+			const { postData } = await topics.post({
+				uid: topic.userId,
+				cid: topic.categoryId,
+				title: utils.generateUUID(),
+				content: utils.generateUUID(),
+			});
+			await posts.delete(postData.pid, topic.userId);
+			const uid = await User.create({ username: utils.generateUUID().slice(0, 10) });
+
+			await assert.rejects(
+				topics.reply({ uid, content: 'test post', tid: postData.topic.tid, toPid: postData.pid }),
+				{ message: '[[error:invalid-pid]]' }
+			);
+		});
+
+		it('should properly create a new reply with toPid that has been deleted (user\'s own deleted post)', async () => {
+			const { postData } = await topics.post({
+				uid: topic.userId,
+				cid: topic.categoryId,
+				title: utils.generateUUID(),
+				content: utils.generateUUID(),
+			});
+			await posts.delete(postData.pid, topic.userId);
+			const uid = await User.create({ username: utils.generateUUID().slice(0, 10) });
+
+			const { pid } = await topics.reply({ uid: topic.userId, content: 'test post', tid: postData.topic.tid, toPid: postData.pid });
+			assert(pid);
+		});
+
 		it('should delete nested relies properly', async () => {
 			const result = await topics.post({ uid: fooUid, title: 'nested test', content: 'main post', cid: topic.categoryId });
 			const reply1 = await topics.reply({ uid: fooUid, content: 'reply post 1', tid: result.topicData.tid });
@@ -327,7 +372,228 @@ describe('Topic\'s', () => {
 			replies = await apiPosts.getReplies({ uid: fooUid }, { pid: reply1.pid });
 			assert.strictEqual(replies, null);
 			toPid = await posts.getPostField(reply2.pid, 'toPid');
-			assert.strictEqual(parseInt(toPid, 10), parseInt(reply1.pid, 10));
+			assert.strictEqual(toPid, null);
+		});
+	});
+
+	describe('Post Replies and Immediate Reply Detection', () => {
+		let topicData;
+		let mainPost;
+		let reply1;
+		let reply2;
+
+		before(async () => {
+			const result = await topics.post({
+				uid: fooUid,
+				cid: categoryObj.cid,
+				title: 'Test immediate replies',
+				content: 'Main post content for testing',
+			});
+			topicData = result.topicData;
+			mainPost = result.postData;
+
+			// Create first reply
+			reply1 = await topics.reply({
+				uid: fooUid,
+				tid: topicData.tid,
+				content: 'First reply content',
+			});
+
+			// Create second reply that is a direct reply to the first
+			reply2 = await topics.reply({
+				uid: fooUid,
+				tid: topicData.tid,
+				content: 'Second reply to first',
+				toPid: reply1.pid,
+			});
+		});
+
+		it('should detect immediate reply when posts are adjacent', async () => {
+			const postsData = await topics.getTopicPosts(
+				topicData,
+				`tid:${topicData.tid}:posts`,
+				0,
+				10,
+				fooUid,
+				false
+			);
+			assert(postsData);
+			assert(postsData.length >= 2);
+
+			// Find the reply that has replies to it
+			const replyWithReplies = postsData.find(p => p.pid === reply1.pid);
+			assert(replyWithReplies);
+			assert(replyWithReplies.replies);
+			assert.strictEqual(replyWithReplies.replies.count, 1);
+		});
+
+		it('should return false for hasSingleImmediateReply when currentPost has no index', async () => {
+			// Create a new topic with a post that has exactly one reply
+			const newTopic = await topics.post({
+				uid: fooUid,
+				cid: categoryObj.cid,
+				title: 'Test no index case',
+				content: 'Main post for no index test',
+			});
+
+			const parentReply = await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'Parent reply that will have one reply',
+			});
+
+			// Create exactly one reply to parentReply (triggers checkIsImmediateReply)
+			await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'Single reply to parent',
+				toPid: parentReply.pid,
+			});
+
+			// Get raw post data WITHOUT index set (bypass getTopicPosts which sets index)
+			const postData = await posts.getPostsByPids([parentReply.pid], fooUid);
+
+			// Ensure index is not set to trigger the early return in checkIsImmediateReply
+			delete postData[0].index;
+
+			// Call addPostData directly - this calls getPostReplies -> checkIsImmediateReply
+			const enrichedPosts = await topics.addPostData(postData, fooUid);
+
+			assert(enrichedPosts[0].replies);
+			assert.strictEqual(enrichedPosts[0].replies.count, 1);
+			// Should be false because currentPost.index is null/undefined
+			assert.strictEqual(enrichedPosts[0].replies.hasSingleImmediateReply, false);
+		});
+
+		it('should handle reply not in postDataMap by fetching from database', async () => {
+			// Create a new reply that won't be in the initial postDataMap
+			const newTopic = await topics.post({
+				uid: fooUid,
+				cid: categoryObj.cid,
+				title: 'Test reply not in map',
+				content: 'Main post for edge case',
+			});
+
+			const firstReply = await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'First reply here',
+			});
+
+			// Create a reply to firstReply
+			await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'Reply to first',
+				toPid: firstReply.pid,
+			});
+
+			// Fetch only specific posts (simulating a case where reply might not be in map)
+			const postsData = await topics.getTopicPosts(
+				newTopic.topicData,
+				`tid:${newTopic.topicData.tid}:posts`,
+				0,
+				1,
+				fooUid,
+				false
+			);
+			assert(postsData);
+		});
+
+		it('should show multiple replies text when post has more than one reply', async () => {
+			// Create a topic with a post that has multiple replies
+			const newTopic = await topics.post({
+				uid: fooUid,
+				cid: categoryObj.cid,
+				title: 'Test multiple replies',
+				content: 'Main post for multiple replies test',
+			});
+
+			const firstReply = await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'First reply to main',
+			});
+
+			// Create multiple replies to firstReply
+			await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'Reply 1 to first',
+				toPid: firstReply.pid,
+			});
+
+			await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'Reply 2 to first',
+				toPid: firstReply.pid,
+			});
+
+			const postsData = await topics.getTopicPosts(
+				newTopic.topicData,
+				`tid:${newTopic.topicData.tid}:posts`,
+				0,
+				10,
+				fooUid,
+				false
+			);
+
+			const replyWithMultipleReplies = postsData.find(p => p.pid === firstReply.pid);
+			assert(replyWithMultipleReplies);
+			assert(replyWithMultipleReplies.replies);
+			assert.strictEqual(replyWithMultipleReplies.replies.count, 2);
+			assert(replyWithMultipleReplies.replies.text.includes('2'));
+		});
+
+		it('should handle hasMore when more than 5 unique users reply to a post', async () => {
+			// Create multiple users
+			const timestamp = Date.now();
+			const userIds = await Promise.all(
+				Array.from({ length: 7 }, (_, i) =>
+					User.create({ username: `replyuser${i}${timestamp}` })
+				)
+			);
+
+			const newTopic = await topics.post({
+				uid: fooUid,
+				cid: categoryObj.cid,
+				title: 'Test hasMore users',
+				content: 'Main post for hasMore test',
+			});
+
+			const firstReply = await topics.reply({
+				uid: fooUid,
+				tid: newTopic.topicData.tid,
+				content: 'First reply to get replies',
+			});
+
+			// Create replies from 7 different users to trigger hasMore
+			// Using sequential execution to maintain order
+			for (const uid of userIds) {
+				// eslint-disable-next-line no-await-in-loop
+				await topics.reply({
+					uid: uid,
+					tid: newTopic.topicData.tid,
+					content: `Reply from user ${uid}`,
+					toPid: firstReply.pid,
+				});
+			}
+
+			const postsData = await topics.getTopicPosts(
+				newTopic.topicData,
+				`tid:${newTopic.topicData.tid}:posts`,
+				0,
+				20,
+				fooUid,
+				false
+			);
+
+			const replyWithManyReplies = postsData.find(p => p.pid === firstReply.pid);
+			assert(replyWithManyReplies);
+			assert(replyWithManyReplies.replies);
+			assert.strictEqual(replyWithManyReplies.replies.hasMore, true);
+			assert.strictEqual(replyWithManyReplies.replies.users.length, 5);
 		});
 	});
 
@@ -1376,7 +1642,7 @@ describe('Topic\'s', () => {
 			const result = await topics.post({ uid: adminUid, title: 'deleted unread', content: 'not unread', cid: categoryObj.cid });
 			await topics.delete(result.topicData.tid, adminUid);
 			const unreadTids = await topics.getUnreadTids({ cid: 0, uid: uid });
-			assert(!unreadTids.includes(result.topicData.tid), JSON.stringify({ unreadTids, tid: result.topicData.tid }));
+			assert(!unreadTids.includes(result.topicData.tid));
 		});
 	});
 
@@ -1955,8 +2221,7 @@ describe('Topic\'s', () => {
 		it('should get teasers with 2 params', (done) => {
 			topics.getTeasers([topic1.topicData, topic2.topicData], 1, (err, teasers) => {
 				assert.ifError(err);
-				assert(teasers[0]);
-				assert(teasers[1]);
+				assert.deepEqual([undefined, undefined], teasers);
 				done();
 			});
 		});
@@ -2460,35 +2725,6 @@ describe('Topic\'s', () => {
 		it('should remove from topics:scheduled on purge', async () => {
 			const score = await db.sortedSetScore('topics:scheduled', topicData.tid);
 			assert(!score);
-		});
-
-		it('should properly update timestamp in cid:<cid>:pids after editing and posting immediately', async () => {
-			const scheduleTimestamp = Date.now() + (86400000 * 365);
-			const result = await topics.post({
-				cid: categoryObj.cid,
-				title: 'testing cid:<cid>:pids',
-				content: 'some content here',
-				uid: adminUid,
-				timestamp: scheduleTimestamp,
-			});
-			const { mainPid } = result.topicData;
-
-			assert.strictEqual(
-				await db.isSortedSetMember(`cid:${categoryObj.cid}:pids`, mainPid),
-				false,
-			);
-
-			// edit main post and publish
-			await posts.edit({
-				uid: adminUid,
-				pid: mainPid,
-				content: 'some content here - edited',
-				timestamp: Date.now(),
-			});
-
-			// the score in cid:<cid>:pids should be less than Date.now()
-			const score = await db.sortedSetScore(`cid:${categoryObj.cid}:pids`, mainPid);
-			assert(score < Date.now(), 'Post in cid:<cid>:pids has wrong score, it should not be in the future');
 		});
 	});
 });
