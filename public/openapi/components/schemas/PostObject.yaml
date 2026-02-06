@@ -155,6 +155,10 @@ PostObject:
       type: boolean
     replies:
       type: number
+    post_type:
+      type: string
+      description: The type of post
+      enum: [post, question]
 PostDataObject:
   description: The output as returned from `Posts.getPostsData`
   allOf:
