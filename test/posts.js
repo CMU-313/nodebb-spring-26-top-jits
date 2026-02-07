@@ -302,6 +302,18 @@ describe('Post\'s', () => {
 	});
 
 	describe('post types', () => {
+		const POST_POST_TYPE = posts.POST_TYPES[0];
+		const QUESTION_POST_TYPE = posts.POST_TYPES[1];
+
+		async function expectPostType(pid, expectedType) {
+			const actual = await posts.getPostField(pid, 'postType');
+			assert.equal(
+				actual,
+				expectedType,
+				`Expected pid=${pid} postType="${expectedType}" but got "${actual}"`
+			);
+		};
+
 		it('should create a post with default post type', async () => {
 			const ownerUid = await user.create({ username: 'owner user' });
 			const topic = await topics.post({
@@ -310,9 +322,7 @@ describe('Post\'s', () => {
 				title: 'Topic for post type testing',
 				content: 'Some text here for the OP',
 			});
-			const pid = topic.postData.pid;
-			const postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'post');
+			await expectPostType(topic.postData.pid, POST_POST_TYPE);
 		});
 
 		it('should create a post with question post type', async () => {
@@ -324,9 +334,7 @@ describe('Post\'s', () => {
 				content: 'Some text here for the OP',
 				postType: 'question',
 			});
-			const pid = topic.postData.pid;
-			const postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'question');
+			await expectPostType(topic.postData.pid, QUESTION_POST_TYPE);
 		});
 		
 		it('should create a post with post as the post type', async () => {
@@ -338,9 +346,7 @@ describe('Post\'s', () => {
 				content: 'Some text here for the OP',
 				postType: 'post',
 			});
-			const pid = topic.postData.pid;
-			const postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'post');
+			await expectPostType(topic.postData.pid, POST_POST_TYPE);
 		});
 
 		it('should create a post with default post type if post type is invalid', async () => {
@@ -352,9 +358,7 @@ describe('Post\'s', () => {
 				content: 'Some text here for the OP',
 				postType: 'invalid_postType',
 			});
-			const pid = topic.postData.pid;
-			const postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'post');
+			await expectPostType(topic.postData.pid, POST_POST_TYPE);
 		});
 
 		it('should update the post type upon edit', async () => {
@@ -368,16 +372,15 @@ describe('Post\'s', () => {
 			});
 			const pid = topic.postData.pid;
 			let postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'post');
 			const content = topic.postData.content;
+			await expectPostType(topic.postData.pid, POST_POST_TYPE);
 			
 			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'question' });
-			postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'question');
+			await expectPostType(topic.postData.pid, QUESTION_POST_TYPE);
 
 			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'post' });
 			postType = await posts.getPostField(pid, 'postType');
-			assert.equal(postType, 'post');
+			await expectPostType(topic.postData.pid, POST_POST_TYPE);
 		});
 
 		it('should show post types in summary', async () => {
@@ -390,8 +393,8 @@ describe('Post\'s', () => {
 				postType: 'question',
 			});
 			const pid = topic.postData.pid;
-			posts.getPostSummaryByPids([pid], uid, {}, (err, data) => {
-				assert.equal(data[0].postType, 'question');
+			posts.getPostSummaryByPids([pid], uid, {}, async (err, data) => {
+				assert.equal(data[0].postType, QUESTION_POST_TYPE);
 			});
 		});
 	});
