@@ -362,7 +362,7 @@ describe('Post\'s', () => {
 			const topic = await topics.post({
 				uid: uid,
 				cid,
-				title: 'Topic for question post type editing testing',
+				title: 'Topic for post type editing testing',
 				content: 'Some text here for the OP',
 				postType: 'post',
 			});
@@ -374,6 +374,25 @@ describe('Post\'s', () => {
 			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'question' });
 			postType = await posts.getPostField(pid, 'postType');
 			assert.equal(postType, 'question');
+
+			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'post' });
+			postType = await posts.getPostField(pid, 'postType');
+			assert.equal(postType, 'post');
+		});
+
+		it('should show post types in summary', async () => {
+			const uid = await user.create({ username: 'owner user'});
+			const topic = await topics.post({
+				uid: uid,
+				cid,
+				title: 'First topic post type in summary testing',
+				content: 'Some text here for the OP',
+				postType: 'question',
+			});
+			const pid = topic.postData.pid;
+			posts.getPostSummaryByPids([pid], uid, {}, (err, data) => {
+				assert.equal(data[0].postType, 'question');
+			});
 		});
 	});
 
