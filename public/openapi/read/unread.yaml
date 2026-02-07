@@ -180,6 +180,10 @@ get:
                                       example: "#f44336"
                                 index:
                                   type: number
+                                postType:
+                                  type: string
+                                  description: The type of post
+                                  enum: [post, question]
                             tags:
                               type: array
                               items:
