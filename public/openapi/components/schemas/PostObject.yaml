@@ -199,6 +199,10 @@ PostDataObject:
           type: string
         index:
           type: number
+        postType:
+          type: string
+          description: The type of post
+          enum: [post, question]
         user:
           type: object
           properties:

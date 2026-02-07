@@ -150,6 +150,10 @@ get:
                                   timestampISO:
                                     type: string
                                     description: An ISO 8601 formatted date string (complementing `timestamp`)
+                                  postType:
+                                    type: string
+                                    description: The type of post
+                                    enum: [post, question]
                                   user:
                                     type: object
                                     properties:
