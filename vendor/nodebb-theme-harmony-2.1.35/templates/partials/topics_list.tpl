@@ -61,6 +61,9 @@
 					</span>
 
 					<div class="d-flex gap-1 d-block d-lg-none w-100">
+						<span class="badge text-body border stats text-xs text-muted posttype">
+							<span component="topic/post-type" class="fw-normal">{./teaser.postType}</span>
+						</span>
 						<span class="badge text-body border stats text-xs text-muted">
 							<i class="fa-regular fa-fw fa-message"></i>
 							<span component="topic/post-count" class="fw-normal">{humanReadableNumber(./postcount, 0)}</span>
@@ -68,6 +71,10 @@
 
 						<a href="{config.relative_path}/topic/{./slug}{{{ if (./teaser.timestampISO && !config.theme.mobileTopicTeasers) }}}/{./teaser.index}{{{ end }}}" class="border badge bg-transparent text-muted fw-normal timeago" title="{{{ if (./teaser.timestampISO && !config.theme.mobileTopicTeasers) }}}{./teaser.timestampISO}{{{ else }}}{./timestampISO}{{{ end }}}"></a>
 					</div>
+
+					<span class="badge text-body border stats text-xs text-muted d-none d-lg-block posttype">
+						<span component="topic/post-type" class="fw-normal">{./teaser.postType}</span>
+					</span>
 
 					<a href="{config.relative_path}/topic/{./slug}" class="d-none d-lg-block badge bg-transparent text-muted fw-normal timeago" title="{./timestampISO}"></a>
 				</span>
