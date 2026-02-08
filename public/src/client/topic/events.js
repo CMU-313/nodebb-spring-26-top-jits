@@ -29,6 +29,9 @@ define('forum/topic/events', [
 		'event:topic_pinned': threadTools.setPinnedState,
 		'event:topic_unpinned': threadTools.setPinnedState,
 
+		'event:topic_solved': threadTools.setSolvedState,
+		'event:topic_unsolved': threadTools.setSolvedState,
+
 		'event:topic_moved': onTopicMoved,
 
 		'event:post_edited': onPostEdited,
