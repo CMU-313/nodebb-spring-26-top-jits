@@ -37,16 +37,19 @@
 				</h1>
 
 				<div class="topic-info d-flex gap-2 align-items-center flex-wrap {{{ if config.theme.centerHeaderElements }}}justify-content-center{{{ end }}}">
-					<span component="topic/labels" class="d-flex gap-2 {{{ if (!scheduled && (!pinned && (!locked && (!icons.length && (!oldCid || (oldCid == "-1")))))) }}}hidden{{{ end }}}">
+					<span component="topic/labels" class="d-flex gap-2 {{{ if (!scheduled && (!pinned && (!locked && (!solved && (!icons.length && (!oldCid || (oldCid == "-1"))))))) }}}hidden{{{ end }}}">
 						<span component="topic/scheduled" class="badge badge border border-gray-300 text-body {{{ if !scheduled }}}hidden{{{ end }}}">
 							<i class="fa fa-clock-o"></i> [[topic:scheduled]]
 						</span>
 						<span component="topic/pinned" class="badge badge border border-gray-300 text-body {{{ if (scheduled || !pinned) }}}hidden{{{ end }}}">
 							<i class="fa fa-thumb-tack"></i> {{{ if !pinExpiry }}}[[topic:pinned]]{{{ else }}}[[topic:pinned-with-expiry, {isoTimeToLocaleString(./pinExpiryISO, config.userLang)}]]{{{ end }}}
 						</span>
-						<span component="topic/locked" class="badge badge border border-gray-300 text-body {{{ if !locked }}}hidden{{{ end }}}">
-							<i class="fa fa-lock"></i> [[topic:locked]]
-						</span>
+					<span component="topic/locked" class="badge badge border border-gray-300 text-body {{{ if !locked }}}hidden{{{ end }}}">
+						<i class="fa fa-lock"></i> [[topic:locked]]
+					</span>
+					<span component="topic/solved" class="badge badge border border-success text-success {{{ if !solved }}}hidden{{{ end }}}">
+						<i class="fa fa-check-circle"></i> [[topic:solved]]
+					</span>
 						<a component="topic/moved" href="{config.relative_path}/category/{oldCid}" class="badge badge border border-gray-300 text-body text-decoration-none {{{ if (!oldCid || (oldCid == "-1")) }}}hidden{{{ end }}}">
 							<i class="fa fa-arrow-circle-right"></i> {{{ if privileges.isAdminOrMod }}}[[topic:moved-from, {oldCategory.name}]]{{{ else }}}[[topic:moved]]{{{ end }}}
 						</a>
@@ -69,11 +72,12 @@
 				{{{ if forker }}}
 				<!-- IMPORT partials/topic/forked-message.tpl -->
 				{{{ end }}}
-				{{{ if !scheduled }}}
-				<!-- IMPORT partials/topic/deleted-message.tpl -->
-				{{{ end }}}
+			{{{ if !scheduled }}}
+			<!-- IMPORT partials/topic/deleted-message.tpl -->
+			{{{ end }}}
+			<!-- IMPORT partials/topic/solved-message.tpl -->
 
-				<div class="d-flex gap-0 gap-lg-5">
+			<div class="d-flex gap-0 gap-lg-5">
 					<div class="posts-container" style="min-width: 0;">
 						<ul component="topic" class="posts timeline list-unstyled p-0 py-3" style="min-width: 0;" data-tid="{tid}" data-cid="{cid}">
 						{{{ each posts }}}

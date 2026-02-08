@@ -40,10 +40,14 @@
 						<i class="fa fa-thumb-tack"></i>
 						<span>{{{ if !./pinExpiry }}}[[topic:pinned]]{{{ else }}}[[topic:pinned-with-expiry, {isoTimeToLocaleString(./pinExpiryISO, config.userLang)}]]{{{ end }}}</span>
 					</span>
-					<span component="topic/locked" class="badge border border-gray-300 text-body {{{ if !./locked }}}hidden{{{ end }}}">
-						<i class="fa fa-lock"></i>
-						<span>[[topic:locked]]</span>
-					</span>
+				<span component="topic/locked" class="badge border border-gray-300 text-body {{{ if !./locked }}}hidden{{{ end }}}">
+					<i class="fa fa-lock"></i>
+					<span>[[topic:locked]]</span>
+				</span>
+				<span component="topic/solved" class="badge border border-success text-success {{{ if !./solved }}}hidden{{{ end }}}">
+					<i class="fa fa-check-circle"></i>
+					<span>[[topic:solved]]</span>
+				</span>
 					<span component="topic/moved" class="badge border border-gray-300 text-body {{{ if (!./oldCid || (./oldCid == "-1")) }}}hidden{{{ end }}}">
 						<i class="fa fa-arrow-circle-right"></i>
 						<span>[[topic:moved]]</span>
