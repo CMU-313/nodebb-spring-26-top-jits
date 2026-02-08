@@ -934,7 +934,10 @@ describe('Flags', () => {
 			});
 
 			it('should not allow flagging post in private category', async () => {
-				const category = await Categories.create({ name: 'private category' });
+				// Reset lastposttime to avoid test pollution from earlier tests
+			await User.setUserField(uid3, 'lastposttime', 0);
+
+			const category = await Categories.create({ name: 'private category' });
 
 				await Privileges.categories.rescind(['groups:topics:read'], category.cid, 'registered-users');
 				await Groups.join('private category', uid3);

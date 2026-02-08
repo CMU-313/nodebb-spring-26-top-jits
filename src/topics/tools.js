@@ -303,6 +303,31 @@ module.exports = function (Topics) {
 		plugins.hooks.fire('action:topic.move', hookData);
 	};
 
+	topicTools.solve = async function (tid, uid) {
+		return await toggleSolve(tid, uid, true);
+	};
+
+	topicTools.unsolve = async function (tid, uid) {
+		return await toggleSolve(tid, uid, false);
+	};
+
+	async function toggleSolve(tid, uid, solve) {
+		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'solved']);
+		if (!topicData || !topicData.cid) {
+			throw new Error('[[error:no-topic]]');
+		}
+		if (topicData.uid !== uid) {
+			throw new Error('[[error:no-privileges]]');
+		}
+		await Topics.setTopicField(tid, 'solved', solve ? 1 : 0);
+		topicData.events = await Topics.events.log(tid, { type: solve ? 'solve' : 'unsolve', uid });
+		topicData.isSolved = solve;
+		topicData.solved = solve ? 1 : 0;
+
+		plugins.hooks.fire('action:topic.solve', { topic: _.clone(topicData), uid: uid });
+		return topicData;
+	}
+
 	topicTools.share = async function (tid, uid, timestamp = Date.now()) {
 		const set = `uid:${uid}:shares`;
 		const shared = await db.isSortedSetMember(set, tid);
