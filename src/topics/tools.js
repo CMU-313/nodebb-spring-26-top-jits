@@ -6,6 +6,7 @@ const db = require('../database');
 const topics = require('.');
 const categories = require('../categories');
 const user = require('../user');
+// const posts = require('../posts'); // TODO: Uncomment when postType validation is enabled
 const plugins = require('../plugins');
 const privileges = require('../privileges');
 const utils = require('../utils');
@@ -312,13 +313,33 @@ module.exports = function (Topics) {
 	};
 
 	async function toggleSolve(tid, uid, solve) {
-		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'solved']);
+		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'mainPid', 'solved']);
 		if (!topicData || !topicData.cid) {
 			throw new Error('[[error:no-topic]]');
 		}
-		if (topicData.uid !== uid) {
+
+		// TODO: Add question-type validation when postType feature is implemented
+		// const mainPost = await posts.getPostField(topicData.mainPid, 'postType');
+		// if (mainPost !== 'question') {
+		//     throw new Error('[[error:topic-not-question]]');
+		// }
+
+		// Check permissions: owner OR admin OR moderator
+		const isOwner = parseInt(topicData.uid, 10) === parseInt(uid, 10);
+		const isAdminOrMod = await privileges.topics.isAdminOrMod(tid, uid);
+
+		if (!isOwner && !isAdminOrMod) {
 			throw new Error('[[error:no-privileges]]');
 		}
+
+		// Idempotent: if already in requested state, return early
+		const currentSolved = parseInt(topicData.solved, 10) === 1;
+		if (currentSolved === solve) {
+			topicData.solved = solve ? 1 : 0;
+			topicData.isSolved = solve;
+			return topicData;
+		}
+
 		await Topics.setTopicField(tid, 'solved', solve ? 1 : 0);
 		topicData.events = await Topics.events.log(tid, { type: solve ? 'solve' : 'unsolve', uid });
 		topicData.isSolved = solve;

@@ -1,0 +1,52 @@
+put:
+  tags:
+    - topics
+  summary: mark a topic as solved
+  description: This operation marks a topic as solved. Only question-type topics can be marked as solved. Requires the user to be the topic owner, admin, or moderator.
+  parameters:
+    - in: path
+      name: tid
+      schema:
+        type: string
+      required: true
+      description: a valid topic id
+      example: 1
+  responses:
+    '200':
+      description: Topic successfully marked as solved
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../../../components/schemas/Status.yaml#/Status
+              response:
+                type: object
+                properties: {}
+delete:
+  tags:
+    - topics
+  summary: mark a topic as unsolved
+  description: This operation marks a topic as unsolved. Requires the user to be the topic owner, admin, or moderator.
+  parameters:
+    - in: path
+      name: tid
+      schema:
+        type: string
+      required: true
+      description: a valid topic id
+      example: 1
+  responses:
+    '200':
+      description: Topic successfully marked as unsolved
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../../../components/schemas/Status.yaml#/Status
+              response:
+                type: object
+                properties: {}
