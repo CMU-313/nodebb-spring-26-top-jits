@@ -238,6 +238,191 @@ describe('Topic\'s', () => {
 		});
 	});
 
+	describe('topicType', () => {
+		it('should create a topic with topicType "question"', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Test Question Topic',
+				content: 'This is a question',
+				cid: categoryObj.cid,
+				topicType: 'question',
+			});
+
+			assert(result);
+			assert(result.topicData);
+			assert.strictEqual(result.topicData.topicType, 'question');
+
+			const topicData = await topics.getTopicData(result.topicData.tid);
+			assert.strictEqual(topicData.topicType, 'question');
+		});
+
+		it('should create a topic with topicType "note"', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Test Note Topic',
+				content: 'This is a note',
+				cid: categoryObj.cid,
+				topicType: 'note',
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+
+			const topicData = await topics.getTopicData(result.topicData.tid);
+			assert.strictEqual(topicData.topicType, 'note');
+		});
+
+		it('should default to "note" when topicType is not provided', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Topic Without Type',
+				content: 'No type specified',
+				cid: categoryObj.cid,
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+
+			const topicData = await topics.getTopicData(result.topicData.tid);
+			assert.strictEqual(topicData.topicType, 'note');
+		});
+
+		it('should default to "note" when topicType is invalid', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Topic With Invalid Type',
+				content: 'Invalid type',
+				cid: categoryObj.cid,
+				topicType: 'invalid-type',
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+
+			const topicData = await topics.getTopicData(result.topicData.tid);
+			assert.strictEqual(topicData.topicType, 'note');
+		});
+
+		it('should default to "note" when topicType is null', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Topic With Null Type',
+				content: 'Null type',
+				cid: categoryObj.cid,
+				topicType: null,
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+		});
+
+		it('should default to "note" when topicType is undefined', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Topic With Undefined Type',
+				content: 'Undefined type',
+				cid: categoryObj.cid,
+				topicType: undefined,
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+		});
+
+		it('should default to "note" when topicType is empty string', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Topic With Empty String Type',
+				content: 'Empty string type',
+				cid: categoryObj.cid,
+				topicType: '',
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicData.topicType, 'note');
+		});
+
+		it('should return topicType when fetching topic via getTopicFields', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Question for getTopicFields',
+				content: 'Test',
+				cid: categoryObj.cid,
+				topicType: 'question',
+			});
+
+			const topicFields = await topics.getTopicFields(result.topicData.tid, ['tid', 'title', 'topicType']);
+			assert.strictEqual(topicFields.topicType, 'question');
+		});
+
+		it('should return topicType when fetching multiple topics via getTopicsData', async () => {
+			const result1 = await topics.post({
+				uid: adminUid,
+				title: 'Question 1',
+				content: 'Test',
+				cid: categoryObj.cid,
+				topicType: 'question',
+			});
+
+			const result2 = await topics.post({
+				uid: adminUid,
+				title: 'Note 1',
+				content: 'Test',
+				cid: categoryObj.cid,
+				topicType: 'note',
+			});
+
+			const topicsData = await topics.getTopicsData([result1.topicData.tid, result2.topicData.tid]);
+			assert.strictEqual(topicsData[0].topicType, 'question');
+			assert.strictEqual(topicsData[1].topicType, 'note');
+		});
+
+		it('should return topicType via API get', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Question via API',
+				content: 'Test',
+				cid: categoryObj.cid,
+				topicType: 'question',
+			});
+
+			const data = await apiTopics.get({ uid: adminUid }, { tid: result.topicData.tid });
+			assert.strictEqual(data.topicType, 'question');
+		});
+
+		it('should create topic via API with topicType', async () => {
+			const result = await apiTopics.create({ uid: adminUid }, {
+				title: 'API Question Topic',
+				content: 'This is a question via API',
+				cid: categoryObj.cid,
+				topicType: 'question',
+			});
+
+			assert(result);
+			assert.strictEqual(result.topicType, 'question');
+
+			const topicData = await topics.getTopicData(result.tid);
+			assert.strictEqual(topicData.topicType, 'question');
+		});
+
+		it('should return topicType for legacy topics (backward compatibility)', async () => {
+			// Create a topic the old way (without topicType)
+			const result = await topics.post({
+				uid: adminUid,
+				title: 'Legacy Topic',
+				content: 'No type',
+				cid: categoryObj.cid,
+			});
+
+			// Manually remove topicType to simulate a legacy topic
+			await topics.setTopicFields(result.topicData.tid, { topicType: null });
+
+			// Fetch the topic - should get default 'note'
+			const topicData = await topics.getTopicData(result.topicData.tid);
+			assert.strictEqual(topicData.topicType, 'note');
+		});
+	});
+
 	describe('.reply', () => {
 		let newTopic;
 		let newPost;
@@ -377,6 +562,7 @@ describe('Topic\'s', () => {
 		it('should get a single field', (done) => {
 			topics.getTopicFields(newTopic.tid, ['slug'], (err, data) => {
 				assert.ifError(err);
+				console.log(`data: ${JSON.stringify(data)}`);
 				assert(Object.keys(data).length === 1);
 				assert(data.hasOwnProperty('slug'));
 				done();
