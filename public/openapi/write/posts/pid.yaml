@@ -109,6 +109,11 @@ put:
               type: string
               description: Topic title, only accepted for main posts
               example: New title
+            postType:
+              type: string
+              description: The type of post
+              enum: [post, question]
+              example: post
           required:
             - content
   responses:

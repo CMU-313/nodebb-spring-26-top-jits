@@ -7,6 +7,9 @@
 </span>
 {{{ end }}}
 <span class="badge text-body border border-gray-300 stats text-xs">
+	<span component="topic/type" title="{./topicType}" class="fw-normal">{./topicType}</span>
+</span>
+<span class="badge text-body border border-gray-300 stats text-xs">
 	<i class="fa-regular fa-fw fa-message visible-xs-inline" title="[[global:posts]]"></i>
 	<span component="topic/post-count" title="{postcount}" class="fw-bold">{humanReadableNumber(postcount)}</span>
 	<span class="hidden-xs text-lowercase fw-normal">[[global:posts]]</span>

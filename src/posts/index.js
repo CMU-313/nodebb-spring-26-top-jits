@@ -29,6 +29,17 @@ require('./uploads')(Posts);
 
 Posts.attachments = require('./attachments');
 
+Posts.POST_TYPES = ['post', 'question'];
+Posts.DEFAULT_POST_TYPE = 'post';
+
+Posts.normalizePostType = function (value) {
+	return Posts.POST_TYPES.includes(value) ? value : Posts.DEFAULT_POST_TYPE;
+};
+
+Posts.isValidPostType = function (value) {
+	return Posts.POST_TYPES.includes(value);
+};
+
 Posts.exists = async function (pids) {
 	return await db.exists(
 		Array.isArray(pids) ? pids.map(pid => `post:${pid}`) : `post:${pids}`

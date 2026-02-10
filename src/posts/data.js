@@ -3,6 +3,7 @@
 const db = require('../database');
 const plugins = require('../plugins');
 const utils = require('../utils');
+const Posts = require('./index');
 
 const intFields = [
 	'uid', 'pid', 'tid', 'deleted', 'timestamp',
@@ -77,6 +78,10 @@ function modifyPost(post, fields) {
 			} catch (err) {
 				post.uploads = [];
 			}
+		}
+
+		if (typeof post.postType === 'undefined' || post.postType === null) {
+			post.postType = Posts.DEFAULT_POST_TYPE;
 		}
 	}
 }
