@@ -22,6 +22,7 @@ module.exports = function (SocketTopics) {
 			throw new Error('[[error:no-privileges]]');
 		}
 		topicData.privileges = userPrivileges;
+		topicData.isTopicOwner = (socket.uid > 0 && topicData.uid === socket.uid);
 		const result = await plugins.hooks.fire('filter:topic.thread_tools', {
 			topic: topicData,
 			uid: socket.uid,

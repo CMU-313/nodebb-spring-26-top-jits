@@ -253,7 +253,7 @@ module.exports = function (Topics) {
 		}
 
 		tids = await privileges.topics.filterTids('topics:read', tids, uid);
-		let topicData = await Topics.getTopicsFields(tids, ['uid', 'tid', 'cid', 'tags']);
+		let topicData = await Topics.getTopicsFields(tids, ['uid', 'tid', 'cid', 'tags', 'solved']);
 		const topicCids = _.uniq(topicData.map(topic => topic.cid)).filter(Boolean);
 
 		async function getIgnoredCids() {
@@ -276,6 +276,7 @@ module.exports = function (Topics) {
 			t &&
 			t.cid &&
 			!isCidIgnored[t.cid] &&
+			!parseInt(t.solved, 10) &&
 			(cids || parseInt(t.cid, 10) !== -1) &&
 			(!cids || cids.includes(String(t.cid))) &&
 			(!tags.length || tags.every(tag => t.tags.find(topicTag => topicTag.value === tag)))

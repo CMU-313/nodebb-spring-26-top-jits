@@ -581,6 +581,8 @@ describe('Flags', () => {
 			let result;
 			let flagObj;
 			beforeEach(async () => {
+			// Reset lastposttime to avoid test pollution from earlier tests
+				await User.setUserField(uid3, 'lastposttime', 0);
 				result = await Topics.post({
 					cid: category.cid,
 					uid: uid3,
@@ -934,6 +936,9 @@ describe('Flags', () => {
 			});
 
 			it('should not allow flagging post in private category', async () => {
+				// Reset lastposttime to avoid test pollution from earlier tests
+				await User.setUserField(uid3, 'lastposttime', 0);
+
 				const category = await Categories.create({ name: 'private category' });
 
 				await Privileges.categories.rescind(['groups:topics:read'], category.cid, 'registered-users');

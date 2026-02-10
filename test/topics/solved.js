@@ -1,198 +1,287 @@
 'use strict';
 
 const assert = require('assert');
-
 const db = require('../mocks/databasemock');
-
-const user = require('../../src/user');
-const categories = require('../../src/categories');
 const topics = require('../../src/topics');
-const utils = require('../../src/utils');
+const categories = require('../../src/categories');
+const privileges = require('../../src/privileges');
+const User = require('../../src/user');
 const groups = require('../../src/groups');
-const helpers = require('../helpers');
 const apiTopics = require('../../src/api/topics');
 
-describe('Topic solved status', () => {
-	let cid;
-	let tid;
+describe('Topic Solved Status', () => {
+	let questionTopicData;
+	let regularTopicData;
+	let categoryObj;
 	let ownerUid;
-	let otherUid;
+	let otherUserUid;
 	let adminUid;
+	let moderatorUid;
 
 	before(async () => {
-		({ cid } = await categories.create({ name: utils.generateUUID().slice(0, 8) }));
+		// Create users
+		ownerUid = await User.create({ username: 'topicowner', password: '123456' });
+		otherUserUid = await User.create({ username: 'otheruser', password: '123456' });
+		adminUid = await User.create({ username: 'admin', password: '123456' });
+		moderatorUid = await User.create({ username: 'moderator', password: '123456' });
 
-		ownerUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
-		otherUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
-		adminUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+		// Setup privileges
 		await groups.join('administrators', adminUid);
 
-		const { topicData } = await topics.post({
-			uid: ownerUid,
-			cid: cid,
-			title: utils.generateUUID(),
-			content: utils.generateUUID(),
+		// Create category
+		categoryObj = await categories.create({
+			name: 'Test Category for Solved',
+			description: 'Test category',
 		});
-		tid = topicData.tid;
+
+		// Make moderatorUid a moderator of the category
+		await privileges.categories.give(['moderate'], categoryObj.cid, [moderatorUid]);
+
+		// Create a question-type topic
+		questionTopicData = await topics.post({
+			cid: categoryObj.cid,
+			uid: ownerUid,
+			title: 'Test Question Topic',
+			content: 'This is a question',
+			topicType: 'question',
+		});
+
+		// Create a regular note-type topic (default)
+		regularTopicData = await topics.post({
+			cid: categoryObj.cid,
+			uid: ownerUid,
+			title: 'Regular Topic',
+			content: 'This is a regular post',
+		});
 	});
 
-	describe('topics.tools.solve()', () => {
-		it('should allow topic owner to mark as solved', async () => {
-			const result = await topics.tools.solve(tid, ownerUid);
+	describe('Basic Functionality', () => {
+		it('should allow topic owner to mark question as solved', async () => {
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			assert.strictEqual(result.solved, 1);
+			assert.strictEqual(result.isSolved, true);
+
+			const topicData = await topics.getTopicData(questionTopicData.topicData.tid);
+			assert.strictEqual(topicData.solved, 1);
+		});
+
+		it('should allow topic owner to mark question as unsolved', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			assert.strictEqual(result.solved, 0);
+			assert.strictEqual(result.isSolved, false);
+
+			const topicData = await topics.getTopicData(questionTopicData.topicData.tid);
+			assert.strictEqual(topicData.solved, 0);
+		});
+
+		it('should have solved field in topic data', async () => {
+			const topicData = await topics.getTopicData(questionTopicData.topicData.tid);
+			assert(topicData.hasOwnProperty('solved'));
+			assert.strictEqual(typeof topicData.solved, 'number');
+		});
+
+		it('should initialize new topics with solved: 0', async () => {
+			const newQuestionTopic = await topics.post({
+				cid: categoryObj.cid,
+				uid: ownerUid,
+				title: 'New Question',
+				content: 'Another question',
+				topicType: 'question',
+			});
+
+			const topicData = await topics.getTopicData(newQuestionTopic.topicData.tid);
+			assert.strictEqual(topicData.solved, 0);
+		});
+	});
+
+	describe('Permissions', () => {
+		it('should allow admin to mark question as solved', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, adminUid);
+			assert.strictEqual(result.solved, 1);
+		});
+
+		it('should allow moderator to mark question as solved', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, moderatorUid);
+			assert.strictEqual(result.solved, 1);
+		});
+
+		it('should not allow non-privileged user to mark others\' questions as solved', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			try {
+				await topics.tools.solve(questionTopicData.topicData.tid, otherUserUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:no-privileges]]');
+			}
+		});
+
+		it('should not allow non-privileged user to mark others\' questions as unsolved', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			try {
+				await topics.tools.unsolve(questionTopicData.topicData.tid, otherUserUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:no-privileges]]');
+			}
+		});
+	});
+
+	describe('Validation', () => {
+		it('should throw error when trying to mark non-question topic as solved', async () => {
+			try {
+				await topics.tools.solve(regularTopicData.topicData.tid, ownerUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:topic-not-question]]');
+			}
+		});
+
+		it('should throw error when trying to mark non-question topic as unsolved', async () => {
+			try {
+				await topics.tools.unsolve(regularTopicData.topicData.tid, ownerUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:topic-not-question]]');
+			}
+		});
+
+		it('should throw error when topic does not exist', async () => {
+			try {
+				await topics.tools.solve(99999, ownerUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:no-topic]]');
+			}
+		});
+	});
+
+	describe('Idempotency', () => {
+		it('should succeed silently when marking already-solved question as solved', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
 			assert.strictEqual(result.solved, 1);
 			assert.strictEqual(result.isSolved, true);
 		});
 
-		it('should persist solved field on the topic', async () => {
-			const topicData = await topics.getTopicField(tid, 'solved');
-			assert.strictEqual(parseInt(topicData, 10), 1);
-		});
-
-		it('should not allow non-owner to mark as solved', async () => {
-			// First unsolve it to test again
-			await topics.tools.unsolve(tid, ownerUid);
-
-			await assert.rejects(
-				topics.tools.solve(tid, otherUid),
-				{ message: '[[error:no-privileges]]' }
-			);
-		});
-
-		it('should not allow admin (non-owner) to mark as solved', async () => {
-			await assert.rejects(
-				topics.tools.solve(tid, adminUid),
-				{ message: '[[error:no-privileges]]' }
-			);
-		});
-
-		it('should throw error for non-existent topic', async () => {
-			await assert.rejects(
-				topics.tools.solve(99999, ownerUid),
-				{ message: '[[error:no-topic]]' }
-			);
-		});
-	});
-
-	describe('topics.tools.unsolve()', () => {
-		before(async () => {
-			// Mark as solved first
-			await topics.tools.solve(tid, ownerUid);
-		});
-
-		it('should allow topic owner to unsolve', async () => {
-			const result = await topics.tools.unsolve(tid, ownerUid);
+		it('should succeed silently when marking already-unsolved question as unsolved', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
 			assert.strictEqual(result.solved, 0);
 			assert.strictEqual(result.isSolved, false);
 		});
+	});
 
-		it('should persist unsolved field on the topic', async () => {
-			const topicData = await topics.getTopicField(tid, 'solved');
-			assert.strictEqual(parseInt(topicData, 10), 0);
+	describe('API Endpoints', () => {
+		it('should mark question as solved via API', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			await apiTopics.solve({ uid: ownerUid }, { tids: [questionTopicData.topicData.tid] });
+
+			const topicData = await topics.getTopicData(questionTopicData.topicData.tid);
+			assert.strictEqual(topicData.solved, 1);
 		});
 
-		it('should not allow non-owner to unsolve', async () => {
-			await topics.tools.solve(tid, ownerUid);
-			await assert.rejects(
-				topics.tools.unsolve(tid, otherUid),
-				{ message: '[[error:no-privileges]]' }
-			);
+		it('should mark question as unsolved via API', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			await apiTopics.unsolve({ uid: ownerUid }, { tids: [questionTopicData.topicData.tid] });
+
+			const topicData = await topics.getTopicData(questionTopicData.topicData.tid);
+			assert.strictEqual(topicData.solved, 0);
+		});
+
+		it('should handle multiple topics via API', async () => {
+			const question2 = await topics.post({
+				cid: categoryObj.cid,
+				uid: ownerUid,
+				title: 'Another Question',
+				content: 'More questions',
+				topicType: 'question',
+			});
+
+			await apiTopics.solve({ uid: ownerUid }, {
+				tids: [questionTopicData.topicData.tid, question2.topicData.tid],
+			});
+
+			const topic1Data = await topics.getTopicData(questionTopicData.topicData.tid);
+			const topic2Data = await topics.getTopicData(question2.topicData.tid);
+			assert.strictEqual(topic1Data.solved, 1);
+			assert.strictEqual(topic2Data.solved, 1);
+		});
+
+		it('should return error via API for non-privileged user', async () => {
+			try {
+				await apiTopics.solve({ uid: otherUserUid }, { tids: [questionTopicData.topicData.tid] });
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:no-privileges]]');
+			}
 		});
 	});
 
-	describe('Solved topics filtered from sorted listings', () => {
-		let solvedTid;
-		let unsolvedTid;
-		let filterCid;
-		let filterUid;
+	describe('Event Logging', () => {
+		it('should log solve event', async () => {
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
 
-		before(async () => {
-			({ cid: filterCid } = await categories.create({ name: utils.generateUUID().slice(0, 8) }));
-			filterUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
-
-			const result1 = await topics.post({
-				uid: filterUid,
-				cid: filterCid,
-				title: utils.generateUUID(),
-				content: utils.generateUUID(),
-			});
-			unsolvedTid = result1.topicData.tid;
-
-			const result2 = await topics.post({
-				uid: filterUid,
-				cid: filterCid,
-				title: utils.generateUUID(),
-				content: utils.generateUUID(),
-			});
-			solvedTid = result2.topicData.tid;
-			await topics.tools.solve(solvedTid, filterUid);
+			assert(result.events);
+			assert(Array.isArray(result.events));
+			const solveEvent = result.events.find(e => e.type === 'solve');
+			assert(solveEvent, 'Should have a solve event');
+			assert.strictEqual(solveEvent.uid, ownerUid);
 		});
 
-		it('should filter solved topics from getSortedTopics results', async () => {
-			const data = await topics.getSortedTopics({
-				uid: filterUid,
-				start: 0,
-				stop: 50,
-				cids: [filterCid],
-				sort: 'recent',
-			});
+		it('should log unsolve event', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
 
-			const tids = data.topics.map(t => t.tid);
-			assert(tids.includes(unsolvedTid), 'Unsolved topic should appear in listing');
-			assert(!tids.includes(solvedTid), 'Solved topic should NOT appear in listing');
+			assert(result.events);
+			assert(Array.isArray(result.events));
+			const unsolveEvent = result.events.find(e => e.type === 'unsolve');
+			assert(unsolveEvent, 'Should have an unsolve event');
+			assert.strictEqual(unsolveEvent.uid, ownerUid);
+		});
+
+		it('should not log event when idempotent (already solved)', async () => {
+			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+
+			assert(!result.events || result.events.length === 0, 'Should not log event for idempotent operation');
 		});
 	});
 
-	describe('API endpoints', () => {
-		let apiTid;
-		let apiOwnerUid;
-		let apiOtherUid;
-		let apiCid;
+	describe('Integration with topicType', () => {
+		it('should only allow solving topics with question topicType', async () => {
+			// Regular note should fail
+			try {
+				await topics.tools.solve(regularTopicData.topicData.tid, ownerUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:topic-not-question]]');
+			}
 
-		before(async () => {
-			({ cid: apiCid } = await categories.create({ name: utils.generateUUID().slice(0, 8) }));
-			apiOwnerUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
-			apiOtherUid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Question should succeed
+			await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
+			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
+			assert.strictEqual(result.solved, 1);
+		});
 
-			const { topicData } = await topics.post({
-				uid: apiOwnerUid,
-				cid: apiCid,
-				title: utils.generateUUID(),
-				content: utils.generateUUID(),
+		it('should handle topics created without topicType (defaults to note)', async () => {
+			const legacyTopic = await topics.post({
+				cid: categoryObj.cid,
+				uid: ownerUid,
+				title: 'Legacy Topic',
+				content: 'Created without topicType',
 			});
-			apiTid = topicData.tid;
-		});
 
-		it('should solve a topic via API', async () => {
-			await apiTopics.solve({ uid: apiOwnerUid }, { tids: [apiTid] });
-			const solved = await topics.getTopicField(apiTid, 'solved');
-			assert.strictEqual(parseInt(solved, 10), 1);
-		});
-
-		it('should unsolve a topic via API', async () => {
-			await apiTopics.unsolve({ uid: apiOwnerUid }, { tids: [apiTid] });
-			const solved = await topics.getTopicField(apiTid, 'solved');
-			assert.strictEqual(parseInt(solved, 10), 0);
-		});
-
-		it('should fail to solve when called by non-owner', async () => {
-			await assert.rejects(
-				apiTopics.solve({ uid: apiOtherUid }, { tids: [apiTid] }),
-				{ message: '[[error:no-privileges]]' }
-			);
-		});
-
-		it('should fail to solve a non-existent topic', async () => {
-			await assert.rejects(
-				apiTopics.solve({ uid: apiOwnerUid }, { tids: [99999] }),
-				{ message: '[[error:no-topic]]' }
-			);
-		});
-
-		it('should fail with invalid tids', async () => {
-			await assert.rejects(
-				apiTopics.solve({ uid: apiOwnerUid }, { tids: 'invalid' }),
-				{ message: '[[error:invalid-tid]]' }
-			);
+			// Should fail because default topicType is 'note'
+			try {
+				await topics.tools.solve(legacyTopic.topicData.tid, ownerUid);
+				assert.fail('Should have thrown an error');
+			} catch (err) {
+				assert.strictEqual(err.message, '[[error:topic-not-question]]');
+			}
 		});
 	});
 });

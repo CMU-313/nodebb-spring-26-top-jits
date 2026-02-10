@@ -303,6 +303,49 @@ module.exports = function (Topics) {
 		plugins.hooks.fire('action:topic.move', hookData);
 	};
 
+	topicTools.solve = async function (tid, uid) {
+		return await toggleSolve(tid, uid, true);
+	};
+
+	topicTools.unsolve = async function (tid, uid) {
+		return await toggleSolve(tid, uid, false);
+	};
+
+	async function toggleSolve(tid, uid, solve) {
+		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'mainPid', 'solved', 'topicType']);
+		if (!topicData || !topicData.cid) {
+			throw new Error('[[error:no-topic]]');
+		}
+
+		if (topicData.topicType !== 'question') {
+			throw new Error('[[error:topic-not-question]]');
+		}
+
+		// Check permissions: owner OR admin OR moderator
+		const isOwner = parseInt(topicData.uid, 10) === parseInt(uid, 10);
+		const isAdminOrMod = await privileges.topics.isAdminOrMod(tid, uid);
+
+		if (!isOwner && !isAdminOrMod) {
+			throw new Error('[[error:no-privileges]]');
+		}
+
+		// Idempotent: if already in requested state, return early
+		const currentSolved = parseInt(topicData.solved, 10) === 1;
+		if (currentSolved === solve) {
+			topicData.solved = solve ? 1 : 0;
+			topicData.isSolved = solve;
+			return topicData;
+		}
+
+		await Topics.setTopicField(tid, 'solved', solve ? 1 : 0);
+		topicData.events = await Topics.events.log(tid, { type: solve ? 'solve' : 'unsolve', uid });
+		topicData.isSolved = solve;
+		topicData.solved = solve ? 1 : 0;
+
+		plugins.hooks.fire('action:topic.solve', { topic: _.clone(topicData), uid: uid });
+		return topicData;
+	}
+
 	topicTools.share = async function (tid, uid, timestamp = Date.now()) {
 		const set = `uid:${uid}:shares`;
 		const shared = await db.isSortedSetMember(set, tid);
