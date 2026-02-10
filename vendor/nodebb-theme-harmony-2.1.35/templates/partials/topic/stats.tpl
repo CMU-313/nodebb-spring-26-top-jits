@@ -7,7 +7,7 @@
 </span>
 {{{ end }}}
 <span class="badge text-body border border-gray-300 stats text-xs">
-	<span component="topic/post-type" title="{./teaser.postType}" class="fw-normal">{./posts.0.postType}</span>
+	<span component="topic/type" title="{./topicType}" class="fw-normal">{./topicType}</span>
 </span>
 <span class="badge text-body border border-gray-300 stats text-xs">
 	<i class="fa-regular fa-fw fa-message visible-xs-inline" title="[[global:posts]]"></i>

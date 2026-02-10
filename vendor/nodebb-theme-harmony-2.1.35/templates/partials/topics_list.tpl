@@ -62,7 +62,7 @@
 
 					<div class="d-flex gap-1 d-block d-lg-none w-100">
 						<span class="badge text-body border stats text-xs text-muted posttype">
-							<span component="topic/post-type" class="fw-normal">{./teaser.postType}</span>
+							<span component="topic/type" class="fw-normal">{./topicType}</span>
 						</span>
 						<span class="badge text-body border stats text-xs text-muted">
 							<i class="fa-regular fa-fw fa-message"></i>
@@ -73,7 +73,7 @@
 					</div>
 
 					<span class="badge text-body border stats text-xs text-muted d-none d-lg-block posttype">
-						<span component="topic/post-type" class="fw-normal">{./teaser.postType}</span>
+						<span component="topic/type" class="fw-normal">{./topicType}</span>
 					</span>
 
 					<a href="{config.relative_path}/topic/{./slug}" class="d-none d-lg-block badge bg-transparent text-muted fw-normal timeago" title="{./timestampISO}"></a>
