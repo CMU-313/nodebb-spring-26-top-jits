@@ -3,7 +3,6 @@
 const assert = require('assert');
 const db = require('../mocks/databasemock');
 const topics = require('../../src/topics');
-const posts = require('../../src/posts');
 const categories = require('../../src/categories');
 const privileges = require('../../src/privileges');
 const User = require('../../src/user');
@@ -38,15 +37,16 @@ describe('Topic Solved Status', () => {
 		// Make moderatorUid a moderator of the category
 		await privileges.categories.give(['moderate'], categoryObj.cid, [moderatorUid]);
 
-		// Create a question-type topic (postType not implemented yet)
+		// Create a question-type topic
 		questionTopicData = await topics.post({
 			cid: categoryObj.cid,
 			uid: ownerUid,
 			title: 'Test Question Topic',
 			content: 'This is a question',
+			topicType: 'question',
 		});
 
-		// Create a regular post-type topic (postType not implemented yet)
+		// Create a regular note-type topic (default)
 		regularTopicData = await topics.post({
 			cid: categoryObj.cid,
 			uid: ownerUid,
@@ -87,6 +87,7 @@ describe('Topic Solved Status', () => {
 				uid: ownerUid,
 				title: 'New Question',
 				content: 'Another question',
+				topicType: 'question',
 			});
 
 			const topicData = await topics.getTopicData(newQuestionTopic.topicData.tid);
@@ -129,8 +130,7 @@ describe('Topic Solved Status', () => {
 	});
 
 	describe('Validation', () => {
-		// Skip these tests until postType feature is implemented
-		it.skip('should throw error when trying to mark non-question topic as solved', async () => {
+		it('should throw error when trying to mark non-question topic as solved', async () => {
 			try {
 				await topics.tools.solve(regularTopicData.topicData.tid, ownerUid);
 				assert.fail('Should have thrown an error');
@@ -139,7 +139,7 @@ describe('Topic Solved Status', () => {
 			}
 		});
 
-		it.skip('should throw error when trying to mark non-question topic as unsolved', async () => {
+		it('should throw error when trying to mark non-question topic as unsolved', async () => {
 			try {
 				await topics.tools.unsolve(regularTopicData.topicData.tid, ownerUid);
 				assert.fail('Should have thrown an error');
@@ -164,7 +164,6 @@ describe('Topic Solved Status', () => {
 			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
 			assert.strictEqual(result.solved, 1);
 			assert.strictEqual(result.isSolved, true);
-			// Should not log event or throw error
 		});
 
 		it('should succeed silently when marking already-unsolved question as unsolved', async () => {
@@ -172,7 +171,6 @@ describe('Topic Solved Status', () => {
 			const result = await topics.tools.unsolve(questionTopicData.topicData.tid, ownerUid);
 			assert.strictEqual(result.solved, 0);
 			assert.strictEqual(result.isSolved, false);
-			// Should not log event or throw error
 		});
 	});
 
@@ -199,6 +197,7 @@ describe('Topic Solved Status', () => {
 				uid: ownerUid,
 				title: 'Another Question',
 				content: 'More questions',
+				topicType: 'question',
 			});
 
 			await apiTopics.solve({ uid: ownerUid }, {
@@ -248,15 +247,13 @@ describe('Topic Solved Status', () => {
 			await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
 			const result = await topics.tools.solve(questionTopicData.topicData.tid, ownerUid);
 
-			// Idempotent case should return early without logging event
 			assert(!result.events || result.events.length === 0, 'Should not log event for idempotent operation');
 		});
 	});
 
-	// Skip these tests until postType feature is implemented
-	describe.skip('Integration with postType', () => {
-		it('should only allow solving topics with question postType', async () => {
-			// Regular post should fail
+	describe('Integration with topicType', () => {
+		it('should only allow solving topics with question topicType', async () => {
+			// Regular note should fail
 			try {
 				await topics.tools.solve(regularTopicData.topicData.tid, ownerUid);
 				assert.fail('Should have thrown an error');
@@ -270,16 +267,15 @@ describe('Topic Solved Status', () => {
 			assert.strictEqual(result.solved, 1);
 		});
 
-		it('should handle topics created before postType was added', async () => {
-			// Create a topic without specifying postType (defaults to 'post')
+		it('should handle topics created without topicType (defaults to note)', async () => {
 			const legacyTopic = await topics.post({
 				cid: categoryObj.cid,
 				uid: ownerUid,
 				title: 'Legacy Topic',
-				content: 'Created without postType',
+				content: 'Created without topicType',
 			});
 
-			// Should fail because it's not a question
+			// Should fail because default topicType is 'note'
 			try {
 				await topics.tools.solve(legacyTopic.topicData.tid, ownerUid);
 				assert.fail('Should have thrown an error');

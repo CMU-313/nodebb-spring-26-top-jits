@@ -6,7 +6,6 @@ const db = require('../database');
 const topics = require('.');
 const categories = require('../categories');
 const user = require('../user');
-// const posts = require('../posts'); // TODO: Uncomment when postType validation is enabled
 const plugins = require('../plugins');
 const privileges = require('../privileges');
 const utils = require('../utils');
@@ -313,16 +312,14 @@ module.exports = function (Topics) {
 	};
 
 	async function toggleSolve(tid, uid, solve) {
-		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'mainPid', 'solved']);
+		const topicData = await Topics.getTopicFields(tid, ['tid', 'uid', 'cid', 'mainPid', 'solved', 'topicType']);
 		if (!topicData || !topicData.cid) {
 			throw new Error('[[error:no-topic]]');
 		}
 
-		// TODO: Add question-type validation when postType feature is implemented
-		// const mainPost = await posts.getPostField(topicData.mainPid, 'postType');
-		// if (mainPost !== 'question') {
-		//     throw new Error('[[error:topic-not-question]]');
-		// }
+		if (topicData.topicType !== 'question') {
+			throw new Error('[[error:topic-not-question]]');
+		}
 
 		// Check permissions: owner OR admin OR moderator
 		const isOwner = parseInt(topicData.uid, 10) === parseInt(uid, 10);
