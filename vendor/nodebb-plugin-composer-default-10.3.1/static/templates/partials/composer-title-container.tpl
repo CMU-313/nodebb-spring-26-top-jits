@@ -23,6 +23,15 @@
 		</div>
 	</div>
 
+	{{{ if isTopicOrMain }}}
+	<button class="btn btn-sm btn-link text-body fw-semibold composer-toggle-type" data-action="toggleType">
+		<div class="checkbox position-relative d-none d-md-inline">
+			<i class="fa text-muted pointer fa-square-o p-1"></i>
+		</div>
+		<span class="d-none d-md-inline">Question</span>
+	</button>
+	{{{ end }}}
+
 	<div class="{{{ if !template.compose }}}d-none d-md-flex{{{ else }}}d-flex{{{ end }}} action-bar gap-1 align-items-center">
 		<button class="btn btn-sm btn-link text-body fw-semibold composer-minimize" data-action="hide"><i class="fa fa-angle-down"></i> <span class="d-none d-md-inline">[[topic:composer.hide]]</span></button>
 		<button class="btn btn-sm btn-link composer-discard text-body fw-semibold" data-action="discard"><i class="fa fa-trash"></i> <span class="d-none d-md-inline">[[topic:composer.discard]]</button>

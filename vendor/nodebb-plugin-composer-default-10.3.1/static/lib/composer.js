@@ -202,6 +202,7 @@ define('composer', [
 			body: data.body || '',
 			tags: data.tags || [],
 			thumbs: data.thumbs || [],
+			topicType: 'note',
 			modified: !!((data.title && data.title.length) || (data.body && data.body.length)),
 			isMain: true,
 		};
@@ -366,6 +367,15 @@ define('composer', [
 				postContainer.find('.composer-submit').attr('disabled', true);
 				post(post_uuid);
 			});
+		});
+
+		postContainer.find('.composer-toggle-type').on('click', function (e) {
+			e.preventDefault();
+			const isQuestion = !(composer.posts[post_uuid].topicType === "note");
+			composer.posts[post_uuid].topicType = isQuestion ? "note" : "question";
+			const checkBox = $(this).children('.checkbox').eq(0).children('i').eq(0)
+			checkBox.toggleClass('fa-check-square-o', !isQuestion);
+			checkBox.toggleClass('fa-square-o', isQuestion);
 		});
 
 		postContainer.find('.composer-discard').on('click', function (e) {
@@ -740,6 +750,7 @@ define('composer', [
 				tags: tags.getTags(post_uuid),
 				thumbs: postData.thumbs || [],
 				timestamp: scheduler.getTimestamp(),
+				topicType: postData.topicType,
 			};
 		} else if (action === 'posts.reply') {
 			route = `/topics/${postData.tid}`;
