@@ -1,5 +1,6 @@
 {
 	"id": "nodebb-theme-harmony",
+	"url": "https://github.com/NodeBB/nodebb-theme-harmony",
 	"hooks": [
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" },
