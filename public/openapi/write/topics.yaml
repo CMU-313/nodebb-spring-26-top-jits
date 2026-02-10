@@ -33,6 +33,10 @@ post:
               items:
                 type: string
               example: [test, topic]
+            topicType:
+              type: string
+              description: The type of topic to create
+              enum: [note, question]
           required:
             - cid
             - title
