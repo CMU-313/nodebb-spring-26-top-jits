@@ -1,4 +1,4 @@
-{{{ if isTopicOwner }}}
+{{{ if (isTopicOwner && (topicType == "question")) }}}
 <li {{{ if solved }}}hidden{{{ end }}}>
 	<a component="topic/solve" href="#" class="dropdown-item rounded-1 d-flex align-items-center gap-2 {{{ if solved }}}hidden{{{ end }}}" role="menuitem"><i class="fa fa-fw fa-check-circle text-secondary"></i> [[topic:thread-tools.solve]]</a>
 </li>
