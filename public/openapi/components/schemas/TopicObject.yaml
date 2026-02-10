@@ -271,6 +271,10 @@ TopicObjectSlim:
             - type: number
             - type: string
           nullable: true
+        topicType:
+          type: string
+          enum: [note, question]
+          description: The type of topic. Set on creation. Cannot be changed later.
         thumbs:
           type: array
           items:

@@ -38,6 +38,8 @@ module.exports = function (Topics) {
 			solved: 0,
 		};
 
+		topicData.topicType = Topics.normalizeTopicType(data.topicType);
+
 		if (Array.isArray(data.tags) && data.tags.length) {
 			topicData.tags = data.tags.join(',');
 		}

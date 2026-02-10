@@ -7,7 +7,7 @@ const categories = require('../categories');
 const utils = require('../utils');
 const translator = require('../translator');
 const plugins = require('../plugins');
-
+const Topics = require('./index');
 const intFields = [
 	'tid', 'cid', 'uid', 'mainPid', 'postcount',
 	'viewcount', 'postercount', 'followercount',
@@ -122,6 +122,12 @@ function modifyTopic(topic, fields) {
 
 	if (topic.hasOwnProperty('upvotes') && topic.hasOwnProperty('downvotes')) {
 		topic.votes = topic.upvotes - topic.downvotes;
+	}
+
+	const shouldCheckTopicType = fields.includes('topicType') || !fields.length;
+	const isTopicTypeMissing = typeof topic.topicType === 'undefined' || topic.topicType === null;
+	if (shouldCheckTopicType && isTopicTypeMissing) {
+		topic.topicType = Topics.DEFAULT_TOPIC_TYPE;
 	}
 
 	if (fields.includes('teaserPid') || !fields.length) {
