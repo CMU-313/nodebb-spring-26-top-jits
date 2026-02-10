@@ -247,12 +247,13 @@ describe('API', async () => {
 		// Create a category
 		const testCategory = await categories.create({ name: 'test' });
 
-		// Post a new topic
+		// Post a new topic (question type so solved endpoints work)
 		await topics.post({
 			uid: adminUid,
 			cid: testCategory.cid,
 			title: 'Test Topic',
 			content: 'Test topic content',
+			topicType: 'question',
 		});
 		const unprivTopic = await topics.post({
 			uid: unprivUid,

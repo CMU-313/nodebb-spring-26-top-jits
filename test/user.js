@@ -1273,10 +1273,12 @@ describe('User', () => {
 		});
 
 		it('should ban user temporarily', async () => {
+			// Ensure user is not banned from previous tests
+			await User.bans.unban(testUserUid);
 			await User.bans.ban(testUserUid, Date.now() + 2000);
 			let isBanned = await User.bans.isBanned(testUserUid);
 			assert.equal(isBanned, true);
-			await setTimeout(3000);
+			await setTimeout(3500);
 			isBanned = await User.bans.isBanned(testUserUid);
 			assert.equal(isBanned, false);
 			await User.bans.unban(testUserUid);
@@ -1708,6 +1710,8 @@ describe('User', () => {
 		it('should set moderation note', async () => {
 			const adminUid = await User.create({ username: 'noteadmin' });
 			await groups.join('administrators', adminUid);
+			// Clear any existing moderation notes to avoid test pollution
+			await db.delete(`uid:${testUid}:moderation:notes`);
 			await socketUser.setModerationNote({ uid: adminUid }, { uid: testUid, note: 'this is a test user' });
 			await setTimeout(50);
 			await socketUser.setModerationNote({ uid: adminUid }, { uid: testUid, note: '<svg/onload=alert(document.location);//' });

@@ -31,6 +31,8 @@ describe('Crossposting (& related logic)', () => {
 		before(async () => {
 			({ cid: cid1 } = await categories.create({ name: utils.generateUUID().slice(0, 8) }));
 			uid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await user.setUserField(uid, 'lastposttime', 0);
 			const { topicData } = await topics.post({
 				uid,
 				cid: cid1,
@@ -75,6 +77,8 @@ describe('Crossposting (& related logic)', () => {
 			const crosspostCategory = await categories.create({ name: utils.generateUUID().slice(0, 8) });
 			cid2 = crosspostCategory.cid;
 			uid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await user.setUserField(uid, 'lastposttime', 0);
 			const { topicData } = await topics.post({
 				uid,
 				cid: cid1,
@@ -146,6 +150,8 @@ describe('Crossposting (& related logic)', () => {
 			const crosspostCategory = await categories.create({ name: utils.generateUUID().slice(0, 8) });
 			cid2 = crosspostCategory.cid;
 			uid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await user.setUserField(uid, 'lastposttime', 0);
 			const { topicData } = await topics.post({
 				uid,
 				cid: cid1,
@@ -312,6 +318,8 @@ describe('Crossposting (& related logic)', () => {
 			const crosspostCategory = await categories.create({ name: utils.generateUUID().slice(0, 8) });
 			cid2 = crosspostCategory.cid;
 			uid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await user.setUserField(uid, 'lastposttime', 0);
 			const { topicData } = await topics.post({
 				uid,
 				cid: cid1,
@@ -342,6 +350,8 @@ describe('Crossposting (& related logic)', () => {
 			const crosspostCategory = await categories.create({ name: utils.generateUUID().slice(0, 8) });
 			cid2 = crosspostCategory.cid;
 			uid = await user.create({ username: utils.generateUUID().slice(0, 8) });
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await user.setUserField(uid, 'lastposttime', 0);
 			const { topicData } = await topics.post({
 				uid,
 				cid: cid1,

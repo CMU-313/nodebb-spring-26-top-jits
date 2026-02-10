@@ -143,6 +143,8 @@ describe('Categories', () => {
 		let moveCid;
 		let moveTid;
 		before(async () => {
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await User.setUserField(posterUid, 'lastposttime', 0);
 			const [category, topic] = await Promise.all([
 				Categories.create({
 					name: 'Test Category 2',
@@ -575,14 +577,11 @@ describe('Categories', () => {
 	describe('tag whitelist', () => {
 		let cid;
 		const socketTopics = require('../src/socket.io/topics');
-		before((done) => {
-			Categories.create({
-				name: 'test',
-			}, (err, category) => {
-				assert.ifError(err);
-				cid = category.cid;
-				done();
-			});
+		before(async () => {
+			// Reset lastposttime to avoid test pollution from earlier tests
+			await User.setUserField(posterUid, 'lastposttime', 0);
+			const category = await Categories.create({ name: 'test' });
+			cid = category.cid;
 		});
 
 		it('should error if data is invalid', (done) => {

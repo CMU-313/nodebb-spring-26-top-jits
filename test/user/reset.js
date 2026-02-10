@@ -153,10 +153,10 @@ describe('locks', () => {
 		await assert.rejects(user.reset.send(email), {
 			message: '[[error:reset-rate-limited]]',
 		});
-		user.reset.minSecondsBetweenEmails = 3;
+		user.reset.minSecondsBetweenEmails = 2;
 		const util = require('util');
 		const sleep = util.promisify(setTimeout);
-		await sleep(4 * 1000); // wait 4 seconds
+		await sleep(5 * 1000); // wait 5 seconds
 		await user.reset.send(email);
 		user.reset.minSecondsBetweenEmails = 60;
 	});
