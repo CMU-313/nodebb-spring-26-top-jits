@@ -16,6 +16,13 @@ const social = require('../social');
 
 const Topics = module.exports;
 
+Topics.TOPIC_TYPES = ['question', 'note'];
+Topics.DEFAULT_TOPIC_TYPE = 'note';
+
+Topics.normalizeTopicType = function (value) {
+	return Topics.TOPIC_TYPES.includes(value) ? value : Topics.DEFAULT_TOPIC_TYPE;
+};
+
 require('./data')(Topics);
 require('./create')(Topics);
 require('./delete')(Topics);
