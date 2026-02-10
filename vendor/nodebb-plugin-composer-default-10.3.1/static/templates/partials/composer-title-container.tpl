@@ -23,7 +23,7 @@
 		</div>
 	</div>
 
-	{{{ if isTopicOrMain }}}
+	{{{ if isTopic }}}
 	<button class="btn btn-sm btn-link text-body fw-semibold composer-toggle-type" data-action="toggleType">
 		<div class="checkbox position-relative d-none d-md-inline">
 			<i class="fa text-muted pointer fa-square-o p-1"></i>
