@@ -562,7 +562,6 @@ describe('Topic\'s', () => {
 		it('should get a single field', (done) => {
 			topics.getTopicFields(newTopic.tid, ['slug'], (err, data) => {
 				assert.ifError(err);
-				console.log(`data: ${JSON.stringify(data)}`);
 				assert(Object.keys(data).length === 1);
 				assert(data.hasOwnProperty('slug'));
 				done();
