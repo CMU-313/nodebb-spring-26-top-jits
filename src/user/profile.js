@@ -351,10 +351,7 @@ module.exports = function (User) {
 		}
 	}
 
-	User.changePassword = async function (uid, data) {
-		if (uid <= 0 || !data || !data.uid) {
-			throw new Error('[[error:invalid-uid]]');
-		}
+	async function validateNewPassword(uid, data) {
 		User.isPasswordValid(data.newPassword);
 		const [isAdmin, hasPassword] = await Promise.all([
 			User.isAdministrator(uid),
@@ -382,6 +379,14 @@ module.exports = function (User) {
 				throw new Error('[[user:change-password-error-same-password]]');
 			}
 		}
+	}
+
+	User.changePassword = async function (uid, data) {
+		if (uid <= 0 || !data || !data.uid) {
+			throw new Error('[[error:invalid-uid]]');
+		}
+
+		await validateNewPassword(uid, data);
 
 		const hashedPassword = await User.hashPassword(data.newPassword);
 		await Promise.all([
