@@ -16,9 +16,11 @@ define('forum/topic/postTools', [
 	const PostTools = {};
 
 	let staleReplyAnyway = false;
+	let solvedReplyAnyway = false;
 
 	PostTools.init = function (tid) {
 		staleReplyAnyway = false;
+		solvedReplyAnyway = false;
 
 		renderMenu();
 
@@ -294,7 +296,7 @@ define('forum/topic/postTools', [
 	async function onReplyClicked(button, tid) {
 		const selectedNode = await getSelectedNode();
 
-		showStaleWarning(async function () {
+		showSolvedWarning(() => showStaleWarning(async function () {
 			let username = await getUserSlug(button);
 			if (getData(button, 'data-uid') === '0' || !getData(button, 'data-userslug')) {
 				username = '';
@@ -321,13 +323,13 @@ define('forum/topic/postTools', [
 					body: username ? username + ' ' : ($('[component="topic/quickreply/text"]').val() || ''),
 				});
 			}
-		});
+		}));
 	}
 
 	async function onQuoteClicked(button, tid) {
 		const selectedNode = await getSelectedNode();
 
-		showStaleWarning(async function () {
+		showSolvedWarning(() => showStaleWarning(async function () {
 			const username = await getUserSlug(button);
 			const toPid = getData(button, 'data-pid');
 
@@ -347,7 +349,7 @@ define('forum/topic/postTools', [
 
 			const { content } = await api.get(`/posts/${encodeURIComponent(toPid)}/raw`);
 			quote(content);
-		});
+		}));
 	}
 
 	async function getSelectedNode() {
@@ -455,6 +457,31 @@ define('forum/topic/postTools', [
 		});
 		button.parents('.btn-group').find('.dropdown-toggle').click();
 		return false;
+	}
+
+	function showSolvedWarning(callback) {
+		if (solvedReplyAnyway || !ajaxify.data.solved) {
+			return callback();
+		}
+
+		bootbox.dialog({
+			title: '[[topic:solved-warning.title]]',
+			message: '[[topic:solved-warning.message]]',
+			buttons: {
+				cancel: {
+					label: '[[modules:bootbox.cancel]]',
+					className: 'btn-link',
+				},
+				reply: {
+					label: '[[topic:solved-warning.reply-anyway]]',
+					className: 'btn-primary',
+					callback: function () {
+						solvedReplyAnyway = true;
+						callback();
+					},
+				},
+			},
+		});
 	}
 
 	function showStaleWarning(callback) {

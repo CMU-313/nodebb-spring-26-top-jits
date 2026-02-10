@@ -1,3 +1,13 @@
+{{{ if (isTopicOwner && (topicType == "question")) }}}
+<li {{{ if solved }}}hidden{{{ end }}}>
+	<a component="topic/solve" href="#" class="dropdown-item rounded-1 d-flex align-items-center gap-2 {{{ if solved }}}hidden{{{ end }}}" role="menuitem"><i class="fa fa-fw fa-check-circle text-secondary"></i> [[topic:thread-tools.solve]]</a>
+</li>
+
+<li {{{ if !solved }}}hidden{{{ end }}}>
+	<a component="topic/unsolve" href="#" class="dropdown-item rounded-1 d-flex align-items-center gap-2 {{{ if !solved }}}hidden{{{ end }}}" role="menuitem"><i class="fa fa-fw fa-times-circle text-secondary"></i> [[topic:thread-tools.unsolve]]</a>
+</li>
+{{{ end }}}
+
 {{{ if privileges.editable }}}
 <li {{{ if locked }}}hidden{{{ end }}}>
 	<a component="topic/lock" href="#" class="dropdown-item rounded-1 d-flex align-items-center gap-2 {{{ if locked }}}hidden{{{ end }}}" role="menuitem"><i class="fa fa-fw fa-lock text-secondary"></i> [[topic:thread-tools.lock]]</a>

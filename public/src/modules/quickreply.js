@@ -2,10 +2,10 @@
 
 define('quickreply', [
 	'components', 'autocomplete', 'api',
-	'alerts', 'uploadHelpers', 'mousetrap', 'storage', 'hooks',
+	'alerts', 'uploadHelpers', 'mousetrap', 'storage', 'hooks', 'bootbox',
 ], function (
 	components, autocomplete, api,
-	alerts, uploadHelpers, mousetrap, storage, hooks
+	alerts, uploadHelpers, mousetrap, storage, hooks, bootbox
 ) {
 	const QuickReply = {
 		_autocomplete: null,
@@ -54,50 +54,76 @@ define('quickreply', [
 		});
 
 		let ready = true;
+		let solvedReplyAnyway = false;
 		components.get('topic/quickreply/button').on('click', function (e) {
 			e.preventDefault();
 			if (!ready) {
 				return;
 			}
 
-			const replyMsg = element.val();
-			const replyData = {
-				tid: ajaxify.data.tid,
-				handle: undefined,
-				content: replyMsg,
-			};
-			const replyLen = replyMsg.length;
-			if (replyLen < parseInt(config.minimumPostLength, 10)) {
-				return alerts.error('[[error:content-too-short, ' + config.minimumPostLength + ']]');
-			} else if (replyLen > parseInt(config.maximumPostLength, 10)) {
-				return alerts.error('[[error:content-too-long, ' + config.maximumPostLength + ']]');
+			function doSubmit() {
+				const replyMsg = element.val();
+				const replyData = {
+					tid: ajaxify.data.tid,
+					handle: undefined,
+					content: replyMsg,
+				};
+				const replyLen = replyMsg.length;
+				if (replyLen < parseInt(config.minimumPostLength, 10)) {
+					return alerts.error('[[error:content-too-short, ' + config.minimumPostLength + ']]');
+				} else if (replyLen > parseInt(config.maximumPostLength, 10)) {
+					return alerts.error('[[error:content-too-long, ' + config.maximumPostLength + ']]');
+				}
+
+				ready = false;
+				element.val('');
+				api.post(`/topics/${ajaxify.data.tid}`, replyData, function (err, data) {
+					ready = true;
+					if (err) {
+						element.val(replyMsg);
+						return alerts.error(err);
+					}
+					if (data && data.queued) {
+						alerts.alert({
+							type: 'success',
+							title: '[[global:alert.success]]',
+							message: data.message,
+							timeout: 10000,
+							clickfn: function () {
+								ajaxify.go(`/post-queue/${data.id}`);
+							},
+						});
+					}
+
+					element.val('');
+					storage.removeItem(qrDraftId);
+					QuickReply._autocomplete.hide();
+					hooks.fire('action:quickreply.success', { data });
+				});
 			}
 
-			ready = false;
-			element.val('');
-			api.post(`/topics/${ajaxify.data.tid}`, replyData, function (err, data) {
-				ready = true;
-				if (err) {
-					element.val(replyMsg);
-					return alerts.error(err);
-				}
-				if (data && data.queued) {
-					alerts.alert({
-						type: 'success',
-						title: '[[global:alert.success]]',
-						message: data.message,
-						timeout: 10000,
-						clickfn: function () {
-							ajaxify.go(`/post-queue/${data.id}`);
+			if (!solvedReplyAnyway && ajaxify.data.solved) {
+				bootbox.dialog({
+					title: '[[topic:solved-warning.title]]',
+					message: '[[topic:solved-warning.message]]',
+					buttons: {
+						cancel: {
+							label: '[[modules:bootbox.cancel]]',
+							className: 'btn-link',
 						},
-					});
-				}
-
-				element.val('');
-				storage.removeItem(qrDraftId);
-				QuickReply._autocomplete.hide();
-				hooks.fire('action:quickreply.success', { data });
-			});
+						reply: {
+							label: '[[topic:solved-warning.reply-anyway]]',
+							className: 'btn-primary',
+							callback: function () {
+								solvedReplyAnyway = true;
+								doSubmit();
+							},
+						},
+					},
+				});
+			} else {
+				doSubmit();
+			}
 		});
 
 		const draft = storage.getItem(qrDraftId);
