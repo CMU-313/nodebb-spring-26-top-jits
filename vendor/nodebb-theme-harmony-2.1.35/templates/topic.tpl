@@ -17,8 +17,12 @@
 	<meta itemprop="datePublished" content="{timestampISO}">
 	<meta itemprop="dateModified" content="{lastposttimeISO}">
 	<div itemprop="author" itemscope itemtype="https://schema.org/Person">
+		{{{ if (!anonymous || privileges.isAdminOrMod) }}}
 		<meta itemprop="name" content="{author.username}">
 		{{{ if author.userslug }}}<meta itemprop="url" content="{config.relative_path}/user/{author.userslug}">{{{ end }}}
+		{{{ else }}}
+		<meta itemprop="name" content="Anonymous">
+		{{{ end }}}
 	</div>
 	<div itemprop="interactionStatistic" itemscope itemtype="https://schema.org/InteractionCounter">
 		<meta itemprop="interactionType" content="https://schema.org/CommentAction">
