@@ -31,6 +31,8 @@ module.exports = function (Posts) {
 		let postData = { pid, uid, tid, content, sourceContent, timestamp };
 		postData.postType = Posts.normalizePostType(data.postType);
 
+		postData.anonymous = data.anonymous === true;
+
 		if (data.toPid) {
 			postData.toPid = data.toPid;
 		}
