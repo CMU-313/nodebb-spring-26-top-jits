@@ -28,6 +28,9 @@ PostObject:
       type: number
     deleted:
       type: boolean
+    anonymous:
+      type: boolean
+      description: Whether this post was created with anonymous mode enabled.
     upvotes:
       type: number
     downvotes:
