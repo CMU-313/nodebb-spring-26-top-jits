@@ -7,8 +7,15 @@
     <div class="post-body d-flex flex-column gap-1 mb-2">
         <div class="d-flex gap-2 post-info text-sm align-items-center">
             <div class="post-author d-flex align-items-center gap-1">
+                {{{ if (!./anonymous) }}}
                 <a class="lh-1 text-decoration-none" href="{config.relative_path}/user/{./user.userslug}">{buildAvatar(./user, "16px", true, "not-responsive")}</a>
                 <a class="lh-1 fw-semibold" href="{config.relative_path}/user/{./user.userslug}">{../user.displayname}</a>
+                {{{ else }}}
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:16px;height:16px;font-size:8px;">
+                    <i class="fa fa-user-secret"></i>
+                </span>
+                <span class="lh-1 fw-semibold">Anonymous</span>
+                {{{ end }}}
             </div>
             <span class="timeago text-muted lh-1" title="{./timestampISO}"></span>
         </div>

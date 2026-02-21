@@ -10,6 +10,7 @@
 {{{ end }}}
 <div class="d-flex align-items-start gap-3 post-container-parent">
 	<div class="bg-body d-none d-sm-block rounded-circle" style="outline: 2px solid var(--bs-body-bg);">
+		{{{ if (!./anonymous || ./selfPost || privileges.isAdminOrMod) }}}
 		<a class="d-inline-block position-relative text-decoration-none" href="{{{ if ./user.userslug }}}{config.relative_path}/user/{./user.userslug}{{{ else }}}#{{{ end }}}" aria-label="[[aria:profile-page-for, {./user.displayname}]]">
 			{buildAvatar(posts.user, "48px", true, "", "user/picture")}
 			{{{ if ./user.isLocal }}}
@@ -21,10 +22,16 @@
 			</span>
 			{{{ end }}}
 		</a>
+		{{{ else }}}
+		<div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:48px;height:48px;font-size:22px;" title="Anonymous">
+			<i class="fa fa-user-secret"></i>
+		</div>
+		{{{ end }}}
 	</div>
 	<div class="post-container d-flex gap-2 flex-grow-1 flex-column w-100" style="min-width:0;">
 		<div class="d-flex align-items-start justify-content-between gap-1 flex-nowrap w-100 post-header" itemprop="author" itemscope itemtype="https://schema.org/Person">
 			<div class="d-flex gap-1 flex-wrap align-items-center text-truncate">
+				{{{ if (!./anonymous || ./selfPost || privileges.isAdminOrMod) }}}
 				<meta itemprop="name" content="{./user.displayname}">
 				{{{ if ./user.userslug }}}<meta itemprop="url" content="{config.relative_path}/user/{./user.userslug}">{{{ end }}}
 
@@ -55,6 +62,17 @@
 				{{{ if posts.user.banned }}}
 				<span class="badge bg-danger rounded-1">[[user:banned]]</span>
 				{{{ end }}}
+				{{{ else }}}
+				<meta itemprop="name" content="Anonymous">
+				<div class="d-flex flex-nowrap gap-1 align-items-center text-truncate">
+					<div class="bg-body d-sm-none">
+						<div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:20px;height:20px;font-size:9px;" title="Anonymous">
+							<i class="fa fa-user-secret"></i>
+						</div>
+					</div>
+					<span class="fw-bold text-nowrap text-truncate">Anonymous</span>
+				</div>
+				{{{ end }}}
 
 				<div class="d-flex gap-1 align-items-center">
 					<span class="text-muted">{generateWrote(@value, config.timeagoCutoff)}</span>
@@ -63,6 +81,7 @@
 					<span data-editor="{posts.editor.userslug}" component="post/editor" class="visually-hidden">[[global:last-edited-by, {posts.editor.username}]] <span class="timeago" title="{isoTimeToLocaleString(posts.editedISO, config.userLang)}"></span></span>
 				</div>
 
+				{{{ if (!./anonymous || ./selfPost || privileges.isAdminOrMod) }}}
 				{{{ if posts.user.custom_profile_info.length }}}
 				<div>
 					<span>
@@ -72,6 +91,7 @@
 						{{{ end }}}
 					</span>
 				</div>
+				{{{ end }}}
 				{{{ end }}}
 			</div>
 			<div class="d-flex align-items-center gap-1 justify-content-end">
