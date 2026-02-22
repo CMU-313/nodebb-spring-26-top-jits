@@ -800,13 +800,25 @@ describe('Post\'s', () => {
 	});
 
 	describe('anonymous flag', () => {
+		let anonymousTestTid;
+
 		function isTruthyAnonymous(value) {
 			return value === true || value === 1 || value === '1' || value === 'true';
 		}
 
+		before(async () => {
+			const result = await topics.post({
+				uid: voteeUid,
+				cid: cid,
+				title: 'anonymous test topic',
+				content: 'seed post',
+			});
+			anonymousTestTid = result.topicData.tid;
+		});
+
 		it('should persist anonymous=true for replies and expose it in API responses', async () => {
 			const reply = await apiTopics.reply({ uid: voterUid }, {
-				tid: topicData.tid,
+				tid: anonymousTestTid,
 				content: 'anonymous reply content',
 				anonymous: true,
 			});
@@ -821,7 +833,7 @@ describe('Post\'s', () => {
 
 		it('should default anonymous=false for replies and expose it in API responses', async () => {
 			const reply = await apiTopics.reply({ uid: voterUid }, {
-				tid: topicData.tid,
+				tid: anonymousTestTid,
 				content: 'non-anonymous reply content',
 			});
 			assert.strictEqual(reply.anonymous, false);
