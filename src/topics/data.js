@@ -155,9 +155,12 @@ function modifyTopic(topic, fields) {
 		}
 	}
 
-	if (topic.hasOwnProperty('anonymous')) {
-		topic.anonymous = topic.anonymous === true || topic.anonymous === 1 || topic.anonymous === '1' || topic.anonymous === 'true';
-	} else {
-		topic.anonymous = false;
+	const shouldAttachAnonymous = !fields.length || fields.includes('anonymous');
+	if (shouldAttachAnonymous) {
+		if (topic.hasOwnProperty('anonymous')) {
+			topic.anonymous = topic.anonymous === true || topic.anonymous === 1 || topic.anonymous === '1' || topic.anonymous === 'true';
+		} else {
+			topic.anonymous = false;
+		}
 	}
 }
