@@ -36,6 +36,7 @@ module.exports = function (Topics) {
 			postcount: 0,
 			viewcount: 0,
 			solved: 0,
+			anonymous: data.anonymous === true,
 		};
 
 		topicData.topicType = Topics.normalizeTopicType(data.topicType);

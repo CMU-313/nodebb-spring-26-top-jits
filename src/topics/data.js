@@ -154,4 +154,10 @@ function modifyTopic(topic, fields) {
 			topic.thumbs = [];
 		}
 	}
+
+	if (topic.hasOwnProperty('anonymous')) {
+		topic.anonymous = topic.anonymous === true || topic.anonymous === 1 || topic.anonymous === '1' || topic.anonymous === 'true';
+	} else {
+		topic.anonymous = false;
+	}
 }
