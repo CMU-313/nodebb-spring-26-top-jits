@@ -180,6 +180,9 @@ get:
                                       example: "#f44336"
                                 index:
                                   type: number
+                                anonymous:
+                                  type: boolean
+                                  description: Whether this topic was created with anonymous mode enabled
                                 postType:
                                   type: string
                                   description: The type of post

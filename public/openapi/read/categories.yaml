@@ -196,6 +196,9 @@ get:
                                         type: string
                                       title:
                                         type: string
+                                  anonymous:
+                                    type: boolean
+                                    description: Whether this topic was created with anonymous mode enabled
                                   postType:
                                     type: string
                                     description: The type of post
