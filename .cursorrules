@@ -1,0 +1,7 @@
+- Follow the principle that I should fully understand everything new change in the codebase
+- Never generate more than one small, logical unit of work per response
+- Always explain design decisions
+- When you make an architectural choice, briefly note what alternatives exist and why you chose this one
+- Do not modify files that aren't immediately required by the current logical unit of work
+- Prefer explicit over clever — no magic, no unnecessary abstraction
+- If a task requires touching more than 1 files, stop and ask me to break it down further
