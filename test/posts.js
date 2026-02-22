@@ -799,6 +799,41 @@ describe('Post\'s', () => {
 		});
 	});
 
+	describe('anonymous flag', () => {
+		function isTruthyAnonymous(value) {
+			return value === true || value === 1 || value === '1' || value === 'true';
+		}
+
+		it('should persist anonymous=true for replies and expose it in API responses', async () => {
+			const reply = await apiTopics.reply({ uid: voterUid }, {
+				tid: topicData.tid,
+				content: 'anonymous reply content',
+				anonymous: true,
+			});
+			assert.strictEqual(reply.anonymous, true);
+
+			const storedAnonymous = await posts.getPostField(reply.pid, 'anonymous');
+			assert.strictEqual(isTruthyAnonymous(storedAnonymous), true);
+
+			const summary = await apiPosts.getSummary({ uid: voterUid }, { pid: reply.pid });
+			assert.strictEqual(summary.anonymous, true);
+		});
+
+		it('should default anonymous=false for replies and expose it in API responses', async () => {
+			const reply = await apiTopics.reply({ uid: voterUid }, {
+				tid: topicData.tid,
+				content: 'non-anonymous reply content',
+			});
+			assert.strictEqual(reply.anonymous, false);
+
+			const storedAnonymous = await posts.getPostField(reply.pid, 'anonymous');
+			assert.strictEqual(isTruthyAnonymous(storedAnonymous), false);
+
+			const summary = await apiPosts.getSummary({ uid: voterUid }, { pid: reply.pid });
+			assert.strictEqual(summary.anonymous, false);
+		});
+	});
+
 	it('should get recent poster uids', (done) => {
 		topics.reply({
 			uid: voterUid,

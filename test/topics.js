@@ -93,6 +93,47 @@ describe('Topic\'s', () => {
 			assert.equal(data.tid, topic.tid);
 		});
 
+		describe('anonymous flag', () => {
+			function isTruthyAnonymous(value) {
+				return value === true || value === 1 || value === '1' || value === 'true';
+			}
+
+			it('should persist anonymous=true for new topics and their main posts', async () => {
+				const createdTopic = await apiTopics.create({ uid: adminUid }, {
+					title: 'Anonymous topic title',
+					content: 'Anonymous topic content',
+					cid: topic.categoryId,
+					anonymous: true,
+				});
+
+				assert.strictEqual(createdTopic.anonymous, true);
+
+				const storedTopicAnonymous = await topics.getTopicField(createdTopic.tid, 'anonymous');
+				assert.strictEqual(isTruthyAnonymous(storedTopicAnonymous), true);
+
+				const mainPid = await topics.getTopicField(createdTopic.tid, 'mainPid');
+				const storedPostAnonymous = await posts.getPostField(mainPid, 'anonymous');
+				assert.strictEqual(isTruthyAnonymous(storedPostAnonymous), true);
+			});
+
+			it('should default anonymous=false for new topics and their main posts', async () => {
+				const createdTopic = await apiTopics.create({ uid: adminUid }, {
+					title: 'Non-anonymous topic title',
+					content: 'Non-anonymous topic content',
+					cid: topic.categoryId,
+				});
+
+				assert.strictEqual(createdTopic.anonymous, false);
+
+				const storedTopicAnonymous = await topics.getTopicField(createdTopic.tid, 'anonymous');
+				assert.strictEqual(isTruthyAnonymous(storedTopicAnonymous), false);
+
+				const mainPid = await topics.getTopicField(createdTopic.tid, 'mainPid');
+				const storedPostAnonymous = await posts.getPostField(mainPid, 'anonymous');
+				assert.strictEqual(isTruthyAnonymous(storedPostAnonymous), false);
+			});
+		});
+
 		it('should fail to create new topic with invalid user id', (done) => {
 			topics.post({ uid: null, title: topic.title, content: topic.content, cid: topic.categoryId }, (err) => {
 				assert.equal(err.message, '[[error:no-privileges]]');
