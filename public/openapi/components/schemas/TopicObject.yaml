@@ -270,6 +270,9 @@ TopicObjectSlim:
           type: number
         votes:
           type: number
+        anonymous:
+          type: boolean
+          description: Whether this topic was created with anonymous mode enabled.
         teaserPid:
           oneOf:
             - type: number
