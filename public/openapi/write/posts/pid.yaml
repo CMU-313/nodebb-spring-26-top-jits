@@ -70,6 +70,9 @@ get:
                         items:
                           type: string
                           description: A sha256 hash of the attachment (tied to the corresponding entry in the database)
+                      modOnly:
+                        type: number
+                        description: Whether this post is only visible to admins and global moderators (0 or 1)
                   - type: object
                     description: Optional properties that may or may not be present (except for `pid`, which is always present, and is only here as a hack to pass validation)
                     properties:
@@ -109,6 +112,10 @@ put:
               type: string
               description: Topic title, only accepted for main posts
               example: New title
+            modOnly:
+              type: boolean
+              description: If true, this post will only be visible to admins and global moderators. Only privileged users can set this flag.
+              example: false
           required:
             - content
   responses:
