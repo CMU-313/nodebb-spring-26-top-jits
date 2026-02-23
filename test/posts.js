@@ -1357,6 +1357,247 @@ describe('Post\'s', () => {
 			});
 		});
 	});
+
+	describe('mod-only posts', () => {
+		let adminUid;
+		let globalModUid2;
+		let regularUid;
+		let modOnlyCid;
+		let modOnlyTopic;
+		let modOnlyPost;
+		let modOnlyReply;
+		let normalReply;
+
+		before(async () => {
+			adminUid = await user.create({ username: 'modonly_admin', password: 'adminpass123' });
+			await groups.join('administrators', adminUid);
+			globalModUid2 = await user.create({ username: 'modonly_globalmod', password: 'globalmodpass123' });
+			await groups.join('Global Moderators', globalModUid2);
+			regularUid = await user.create({ username: 'modonly_regular', password: 'regularpass123' });
+			({ cid: modOnlyCid } = await categories.create({
+				name: 'Mod-Only Test Category',
+				description: 'Category for mod-only testing',
+			}));
+		});
+
+		it('should create a post with modOnly flag set to 1', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				cid: modOnlyCid,
+				title: 'Mod-Only Topic',
+				content: 'This is a mod-only main post',
+				modOnly: true,
+			});
+			modOnlyTopic = result.topicData;
+			modOnlyPost = result.postData;
+			assert.strictEqual(modOnlyPost.modOnly, 1);
+			const stored = await posts.getPostField(modOnlyPost.pid, 'modOnly');
+			assert.strictEqual(stored, 1);
+		});
+
+		it('should default modOnly to 0 when not specified', async () => {
+			const result = await topics.post({
+				uid: adminUid,
+				cid: modOnlyCid,
+				title: 'Normal Topic',
+				content: 'This is a normal post',
+			});
+			assert.strictEqual(result.postData.modOnly, 0);
+			const stored = await posts.getPostField(result.postData.pid, 'modOnly');
+			assert.strictEqual(stored, 0);
+		});
+
+		it('should create a modOnly reply to a topic', async () => {
+			modOnlyReply = await topics.reply({
+				uid: adminUid,
+				tid: modOnlyTopic.tid,
+				content: 'This is a mod-only reply',
+				modOnly: true,
+			});
+			assert.strictEqual(modOnlyReply.modOnly, 1);
+		});
+
+		it('should create a normal reply to the same topic', async () => {
+			normalReply = await topics.reply({
+				uid: regularUid,
+				tid: modOnlyTopic.tid,
+				content: 'This is a normal reply',
+			});
+			assert.strictEqual(normalReply.modOnly, 0);
+		});
+
+		it('should allow admin to see modOnly post via API', async () => {
+			const result = await apiPosts.get({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert.strictEqual(result.pid, modOnlyPost.pid);
+		});
+
+		it('should allow global moderator to see modOnly post via API', async () => {
+			const result = await apiPosts.get({ uid: globalModUid2 }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert.strictEqual(result.pid, modOnlyPost.pid);
+		});
+
+		it('should NOT allow regular user to see modOnly post via API', async () => {
+			const result = await apiPosts.get({ uid: regularUid }, { pid: modOnlyPost.pid });
+			assert.strictEqual(result, null);
+		});
+
+		it('should NOT allow guest to see modOnly post via API', async () => {
+			const result = await apiPosts.get({ uid: 0 }, { pid: modOnlyPost.pid });
+			assert.strictEqual(result, null);
+		});
+
+		it('should NOT allow regular user to see modOnly reply via API', async () => {
+			const result = await apiPosts.get({ uid: regularUid }, { pid: modOnlyReply.pid });
+			assert.strictEqual(result, null);
+		});
+
+		it('should NOT allow regular user to get raw content of modOnly post', async () => {
+			const result = await apiPosts.getRaw({ uid: regularUid }, { pid: modOnlyPost.pid });
+			assert.strictEqual(result, null);
+		});
+
+		it('should allow admin to get raw content of modOnly post', async () => {
+			const result = await apiPosts.getRaw({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert(result.length > 0);
+		});
+
+		it('should filter modOnly posts from post summaries for regular users', async () => {
+			const filteredPids = await privileges.posts.filter('topics:read', [modOnlyPost.pid, normalReply.pid], regularUid);
+			assert(!filteredPids.includes(modOnlyPost.pid));
+			assert(filteredPids.includes(normalReply.pid));
+		});
+
+		it('should NOT filter modOnly posts from post summaries for admin', async () => {
+			const filteredPids = await privileges.posts.filter('topics:read', [modOnlyPost.pid, normalReply.pid], adminUid);
+			assert(filteredPids.includes(modOnlyPost.pid));
+			assert(filteredPids.includes(normalReply.pid));
+		});
+
+		it('should NOT filter modOnly posts from post summaries for global moderator', async () => {
+			const filteredPids = await privileges.posts.filter('topics:read', [modOnlyPost.pid, normalReply.pid], globalModUid2);
+			assert(filteredPids.includes(modOnlyPost.pid));
+			assert(filteredPids.includes(normalReply.pid));
+		});
+
+		it('should allow admin to toggle modOnly flag via edit', async () => {
+			const normalTopic = await topics.post({
+				uid: adminUid,
+				cid: modOnlyCid,
+				title: 'Toggle Test Topic',
+				content: 'Toggle test content',
+			});
+			assert.strictEqual(normalTopic.postData.modOnly, 0);
+
+			await apiPosts.edit({ uid: adminUid }, {
+				pid: normalTopic.postData.pid,
+				content: 'Toggle test content',
+				modOnly: true,
+			});
+			const stored = await posts.getPostField(normalTopic.postData.pid, 'modOnly');
+			assert.strictEqual(stored, 1);
+
+			await apiPosts.edit({ uid: adminUid }, {
+				pid: normalTopic.postData.pid,
+				content: 'Toggle test content',
+				modOnly: false,
+			});
+			const stored2 = await posts.getPostField(normalTopic.postData.pid, 'modOnly');
+			assert.strictEqual(stored2, 0);
+		});
+
+		it('should allow global moderator to toggle modOnly flag via edit', async () => {
+			const normalTopic = await topics.post({
+				uid: globalModUid2,
+				cid: modOnlyCid,
+				title: 'GlobalMod Toggle Test',
+				content: 'GlobalMod toggle content',
+			});
+
+			await apiPosts.edit({ uid: globalModUid2 }, {
+				pid: normalTopic.postData.pid,
+				content: 'GlobalMod toggle content',
+				modOnly: true,
+			});
+			const stored = await posts.getPostField(normalTopic.postData.pid, 'modOnly');
+			assert.strictEqual(stored, 1);
+		});
+
+		it('should NOT allow regular user to set modOnly flag via edit', async () => {
+			const normalTopic = await topics.post({
+				uid: regularUid,
+				cid: modOnlyCid,
+				title: 'Regular User Edit Test',
+				content: 'Regular user content',
+			});
+
+			let err;
+			try {
+				await apiPosts.edit({ uid: regularUid }, {
+					pid: normalTopic.postData.pid,
+					content: 'Regular user content',
+					modOnly: true,
+				});
+			} catch (_err) {
+				err = _err;
+			}
+			assert(err);
+			assert.strictEqual(err.message, '[[error:no-privileges]]');
+
+			const stored = await posts.getPostField(normalTopic.postData.pid, 'modOnly');
+			assert.strictEqual(stored, 0);
+		});
+
+		it('should return correct privilege flags for modOnly posts', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
+			assert.strictEqual(privs[0].read, false);
+			assert.strictEqual(privs[0]['topics:read'], false);
+			assert.strictEqual(privs[0].isModOnly, true);
+		});
+
+		it('should return correct privilege flags for modOnly posts for admin', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], adminUid);
+			assert.strictEqual(privs[0].read, true);
+			assert.strictEqual(privs[0]['topics:read'], true);
+			assert.strictEqual(privs[0].isModOnly, true);
+			assert.strictEqual(privs[0].isAdminOrMod, true);
+		});
+
+		it('should return correct privilege flags for normal posts', async () => {
+			const privs = await privileges.posts.get([normalReply.pid], regularUid);
+			assert.strictEqual(privs[0].isModOnly, false);
+			assert.strictEqual(privs[0].read, true);
+		});
+
+		it('should hide modOnly post content via modifyPostByPrivilege for non-privileged users', () => {
+			const mockPost = { content: 'secret content', modOnly: 1, user: { signature: 'sig' } };
+			const mockPrivs = { isAdminOrMod: false, 'posts:view_deleted': false };
+			posts.modifyPostByPrivilege(mockPost, mockPrivs);
+			assert.strictEqual(mockPost.content, '[[topic:post-is-mod-only]]');
+			assert.strictEqual(mockPost.user.signature, '');
+		});
+
+		it('should NOT hide modOnly post content via modifyPostByPrivilege for privileged users', () => {
+			const mockPost = { content: 'secret content', modOnly: 1, user: { signature: 'sig' } };
+			const mockPrivs = { isAdminOrMod: true, 'posts:view_deleted': false };
+			posts.modifyPostByPrivilege(mockPost, mockPrivs);
+			assert.strictEqual(mockPost.content, 'secret content');
+			assert.strictEqual(mockPost.user.signature, 'sig');
+		});
+
+		it('should NOT allow guest to see modOnly post via getSummary', async () => {
+			const result = await apiPosts.getSummary({ uid: 0 }, { pid: modOnlyPost.pid });
+			assert.strictEqual(result, null);
+		});
+
+		it('should allow admin to see modOnly post via getSummary', async () => {
+			const result = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert.strictEqual(result.pid, modOnlyPost.pid);
+		});
+	});
 });
 
 describe('Posts\'', async () => {
