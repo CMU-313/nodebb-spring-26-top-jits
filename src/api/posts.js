@@ -56,9 +56,12 @@ postsAPI.getIndex = async (caller, { pid, sort }) => {
 };
 
 postsAPI.getSummary = async (caller, { pid }) => {
-	const tid = await posts.getPostField(pid, 'tid');
+	const [postPrivs, tid] = await Promise.all([
+		privileges.posts.get([pid], caller.uid),
+		posts.getPostField(pid, 'tid'),
+	]);
 	const topicPrivileges = await privileges.topics.get(tid, caller.uid);
-	if (!topicPrivileges.read || !topicPrivileges['topics:read']) {
+	if (!topicPrivileges.read || !topicPrivileges['topics:read'] || !postPrivs[0].read) {
 		return null;
 	}
 
