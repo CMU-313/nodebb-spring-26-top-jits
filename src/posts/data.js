@@ -8,7 +8,7 @@ const Posts = require('./index');
 const intFields = [
 	'uid', 'pid', 'tid', 'deleted', 'timestamp',
 	'upvotes', 'downvotes', 'deleterUid', 'edited',
-	'replies', 'bookmarks', 'announces',
+	'replies', 'bookmarks', 'announces', 'modOnly',
 ];
 
 module.exports = function (Posts) {
@@ -82,6 +82,9 @@ function modifyPost(post, fields) {
 
 		if (typeof post.postType === 'undefined' || post.postType === null) {
 			post.postType = Posts.DEFAULT_POST_TYPE;
+		}
+		if (typeof post.modOnly === 'undefined' || post.modOnly === null) {
+			post.modOnly = 0;
 		}
 
 		if (post.hasOwnProperty('anonymous')) {
