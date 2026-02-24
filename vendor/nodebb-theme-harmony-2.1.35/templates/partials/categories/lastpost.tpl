@@ -3,7 +3,15 @@
 	{{{ if @first }}}
 	<div component="category/posts" class="ps-2 text-xs d-flex flex-column h-100 gap-1">
 		<div class="text-nowrap text-truncate">
-			<a class="text-decoration-none avatar-tooltip" title="{./user.displayname}" href="{config.relative_path}/user/{./user.userslug}">{buildAvatar(posts.user, "18px", true)}</a>
+			<a class="text-decoration-none avatar-tooltip" title="{./user.displayname}" href="{config.relative_path}/user/{./user.userslug}">
+			{{{ if (!./anonymous) }}}
+			{buildAvatar(posts.user, "18px", true)}
+			{{{ else }}}
+			<span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:18px;height:18px;font-size:9px;" title="Anonymous">
+				<i class="fa fa-user-secret"></i>
+			</span>
+			{{{ end }}}
+		</a>
 			<a class="permalink text-muted timeago text-xs" href="{config.relative_path}/topic/{./topic.slug}{{{ if ./index }}}/{./index}{{{ end }}}" title="{./timestampISO}" aria-label="[[global:lastpost]]"></a>
 		</div>
 		<div class="post-content text-xs text-break line-clamp-sm-2 lh-sm position-relative flex-fill">
