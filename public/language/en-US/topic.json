@@ -241,5 +241,6 @@
     "unread-posts-link": "Unread posts link",
     "thumb-image": "Topic thumbnail image",
     "announcers": "Shares",
-    "announcers-x": "Shares (%1)"
+    "announcers-x": "Shares (%1)",
+    "post-is-mod-only": "This post is private and only visible to moderators"
 }
