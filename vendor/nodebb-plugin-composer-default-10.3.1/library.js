@@ -214,6 +214,7 @@ plugin.filterComposerBuild = async function (hookData) {
 
 			isTopic: !!req.query.cid,
 			isEditing: isEditing,
+			isPrivate: req.query.modOnly ? 1 : (postData && postData.modOnly ? 1 : 0),
 			canSchedule: canScheduleTopics,
 			showHandleInput: meta.config.allowGuestHandles === 1 &&
 				(req.uid === 0 || (isEditing && isGuestPost && (isAdmin || isMod))),
@@ -270,7 +271,23 @@ async function getPostData(req) {
 		return null;
 	}
 
-	return await posts.getPostData(req.query.pid || req.query.toPid);
+	const postData = await posts.getPostData(req.query.pid || req.query.toPid);
+	
+	if (req.query.toPid && postData && req.query.tid) {
+		const topicData = await topics.getTopicData(req.query.tid);
+		if (topicData && topicData.mainPid) {
+			const mainPost = await posts.getPostData(topicData.mainPid);
+			if (mainPost && mainPost.modOnly) {
+				postData.modOnly = 1;
+			}
+		}
+	}
+	
+	if (req.query.modOnly) {
+		postData.modOnly = 1;
+	}
+	
+	return postData;
 }
 
 async function getTopicData(req) {

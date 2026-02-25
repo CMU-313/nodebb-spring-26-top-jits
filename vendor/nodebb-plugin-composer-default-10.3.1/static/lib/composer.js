@@ -326,7 +326,7 @@ define('composer', [
 		}
 	};
 
-	composer.enhance = function (postContainer, post_uuid, postData) {
+		composer.enhance = function (postContainer, post_uuid, postData) {
 		/*
 			This method enhances a composer container with client-side sugar (preview, etc)
 			Everything in here also applies to the /compose route
@@ -352,6 +352,16 @@ define('composer', [
 
 		postContainer.on('change', 'input, textarea', function () {
 			composer.posts[post_uuid].modified = true;
+		});
+
+		postContainer.find('.private-post-toggle').on('click', function (e) {
+			e.preventDefault();
+			var $btn = $(this);
+			var $icon = $btn.find('i');
+			var isPrivate = $icon.hasClass('fa-lock');
+
+			composer.posts[post_uuid].isPrivate = !isPrivate;
+			$icon.toggleClass('fa-lock', !isPrivate).toggleClass('fa-square-o', isPrivate);
 		});
 
 		postContainer.on('click', '.composer-submit', function (e) {
@@ -755,6 +765,7 @@ define('composer', [
 				timestamp: scheduler.getTimestamp(),
 				topicType: postData.topicType,
 				anonymous: isAnonymous,
+				modOnly: postData.isPrivate ? 1 : 0,
 			};
 		} else if (action === 'posts.reply') {
 			route = `/topics/${postData.tid}`;
@@ -765,6 +776,7 @@ define('composer', [
 				content: bodyEl.val(),
 				toPid: postData.toPid,
 				anonymous: isAnonymous,
+				modOnly: postData.isPrivate ? 1 : 0,
 			};
 		} else if (action === 'posts.edit') {
 			method = 'put';
@@ -778,6 +790,7 @@ define('composer', [
 				thumbs: postData.thumbs || [],
 				tags: tags.getTags(post_uuid),
 				timestamp: scheduler.getTimestamp(),
+				modOnly: postData.isPrivate ? 1 : 0,
 			};
 		}
 		var submitHookData = {

@@ -79,6 +79,12 @@
 
 					<i component="post/edit-indicator" class="fa fa-edit text-muted{{{ if privileges.posts:history }}} pointer{{{ end }}} edit-icon {{{ if !posts.editor.username }}}hidden{{{ end }}}" title="[[global:edited-timestamp, {isoTimeToLocaleString(./editedISO, config.userLang)}]]"></i>
 					<span data-editor="{posts.editor.userslug}" component="post/editor" class="visually-hidden">[[global:last-edited-by, {posts.editor.username}]] <span class="timeago" title="{isoTimeToLocaleString(posts.editedISO, config.userLang)}"></span></span>
+
+					{{{ if ./modOnly }}}
+					<span class="badge bg-warning text-dark ms-2" title="[[topic:post-is-mod-only]]">
+						<i class="fa fa-lock"></i> [[global:private]]
+					</span>
+					{{{ end }}}
 				</div>
 
 				{{{ if (!./anonymous || (./selfPost || privileges.isAdminOrMod)) }}}
