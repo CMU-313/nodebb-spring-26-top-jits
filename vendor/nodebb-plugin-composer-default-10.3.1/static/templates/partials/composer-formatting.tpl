@@ -53,6 +53,15 @@
 		</li>
 		{{{ end }}}
 
+		<li>
+			<button class="btn btn-sm btn-link text-body fw-semibold private-post-toggle" data-action="togglePrivatePost">
+				<div class="checkbox position-relative d-none d-md-inline">
+					<i class="fa text-muted pointer {{{ if isPrivate }}}fa-lock{{{ else }}}fa-square-o{{{ end }}} p-1"></i>
+				</div>
+				<span class="d-none d-md-inline">Private</span>
+			</button>
+		</li>
+
 		<form id="fileForm" method="post" enctype="multipart/form-data">
 			<input type="file" id="files" name="files[]" multiple class="hide"/>
 		</form>
@@ -64,6 +73,12 @@
 			<span class="d-none d-xl-inline show-text">[[modules:composer.show-preview]]</span>
 			<span class="d-none d-xl-inline hide-text">[[modules:composer.hide-preview]]</span>
 		</button>
+		{{{ if isAdminOrMod }}}
+		<button class="btn btn-sm btn-link py-2 text-body fw-semibold text-nowrap private-post-btn" data-action="togglePrivatePost" title="Private">
+			<i class="fa fa-lock"></i>
+			<span class="d-none d-xl-inline">Private</span>
+		</button>
+		{{{ end }}}
 		{{{ if composer:showHelpTab }}}
 		<button class="btn btn-sm btn-link py-2 text-body fw-semibold text-nowrap" data-action="help">
 			<i class="fa fa-question"></i>
