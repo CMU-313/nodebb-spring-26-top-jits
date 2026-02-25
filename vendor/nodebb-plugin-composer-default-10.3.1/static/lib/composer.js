@@ -280,6 +280,7 @@ define('composer', [
 				body: translated,
 				modified: !!(translated && translated.length),
 				isMain: false,
+				isPrivate: data.isPrivate || 0,
 			});
 		});
 	};
@@ -302,6 +303,7 @@ define('composer', [
 				postData.title = data.title;
 				postData.modified = true;
 			}
+			postData.isPrivate = postData.modOnly ? 1 : 0;
 			push(postData);
 		});
 	};
@@ -361,8 +363,16 @@ define('composer', [
 			var isPrivate = $icon.hasClass('fa-lock');
 
 			composer.posts[post_uuid].isPrivate = !isPrivate;
-			$icon.toggleClass('fa-lock', !isPrivate).toggleClass('fa-square-o', isPrivate);
+			$icon.toggleClass('fa-lock', !isPrivate).toggleClass('fa-lock-open', isPrivate);
 		});
+
+		// Initialize private toggle button based on initial data
+		var $privateBtn = postContainer.find('.private-post-toggle');
+		if ($privateBtn.length && postData && postData.isPrivate) {
+			var $privateIcon = $privateBtn.find('i');
+			$privateIcon.removeClass('fa-lock-open').addClass('fa-lock');
+			composer.posts[post_uuid].isPrivate = true;
+		}
 
 		postContainer.on('click', '.composer-submit', function (e) {
 			e.preventDefault();
@@ -496,6 +506,7 @@ define('composer', [
 			'composer:showHelpTab': config['composer:showHelpTab'],
 			isTopic: isTopic,
 			isEditing: isEditing,
+			isPrivate: postData ? postData.isPrivate : 0,
 			canSchedule: !!(isMain && privileges &&
 				((privileges['topics:schedule'] && !isEditing) || (isScheduled && privileges.view_scheduled))),
 			canUploadImage: app.user.privileges['upload:post:image'] && (config.maximumFileSize > 0 || app.user.isAdmin),
@@ -765,7 +776,7 @@ define('composer', [
 				timestamp: scheduler.getTimestamp(),
 				topicType: postData.topicType,
 				anonymous: isAnonymous,
-				modOnly: postData.isPrivate ? 1 : 0,
+				modOnly: postData.isPrivate,
 			};
 		} else if (action === 'posts.reply') {
 			route = `/topics/${postData.tid}`;

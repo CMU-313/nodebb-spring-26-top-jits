@@ -9,7 +9,7 @@
 	<form class="flex-grow-1 d-flex flex-column gap-2" method="post" action="{config.relative_path}/compose">
 		<input type="hidden" name="tid" value="{tid}" />
 		<input type="hidden" name="_csrf" value="{config.csrf_token}" />
-		{{{ if topic.mainPost.modOnly }}}
+		{{{ if posts.0.modOnly }}}
 		<input type="hidden" name="modOnly" value="1" />
 		{{{ end }}}
 		<div class="quickreply-message position-relative">

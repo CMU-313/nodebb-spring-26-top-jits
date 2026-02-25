@@ -67,6 +67,7 @@ define('quickreply', [
 					tid: ajaxify.data.tid,
 					handle: undefined,
 					content: replyMsg,
+					modOnly: ajaxify.data.posts && ajaxify.data.posts[0] && ajaxify.data.posts[0].modOnly ? 1 : 0,
 				};
 				const replyLen = replyMsg.length;
 				if (replyLen < parseInt(config.minimumPostLength, 10)) {
@@ -148,6 +149,7 @@ define('quickreply', [
 				tid: ajaxify.data.tid,
 				title: ajaxify.data.titleRaw,
 				body: textEl.val(),
+				modOnly: ajaxify.data.posts && ajaxify.data.posts[0] && ajaxify.data.posts[0].modOnly ? 1 : 0,
 			});
 			textEl.val('');
 		});

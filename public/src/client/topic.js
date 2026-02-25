@@ -49,6 +49,34 @@ define('forum/topic', [
 			posts.signaturesShown = {};
 		}
 		await posts.onTopicPageLoad(components.get('post'));
+
+		// Listen for post edits to update the private post indicator
+		$(window).one('action:ajaxify.start', () => {
+			app.socket.on('event:post_edited', (editResult) => {
+				if (editResult.post && editResult.post.pid) {
+					const isPrivate = editResult.post.modOnly && editResult.post.modOnly !== '0';
+					
+					// Find the specific post being edited
+					const $postEl = $(`[data-pid="${editResult.post.pid}"]`);
+					if ($postEl.length) {
+						const hasPrivateBadge = $postEl.find('.badge.bg-warning.text-dark').length > 0;
+						const $timeRow = $postEl.find('.d-flex.gap-1.align-items-center');
+						
+						if ($timeRow.length) {
+							if (isPrivate && !hasPrivateBadge) {
+								$timeRow.append(
+									`<span class="badge bg-warning text-dark ms-2" title="[[topic:post-is-mod-only]]">
+										<i class="fa fa-lock"></i> [[global:private]]
+									</span>`
+								);
+							} else if (!isPrivate && hasPrivateBadge) {
+								$postEl.find('.badge.bg-warning.text-dark').remove();
+							}
+						}
+					}
+				}
+			});
+		});
 		navigator.init('[component="topic"]>[component="post"]', ajaxify.data.postcount, Topic.toTop, Topic.toBottom, Topic.navigatorCallback);
 
 		postTools.init(tid);
