@@ -154,6 +154,9 @@ get:
                                     type: string
                                     description: The type of post
                                     enum: [post, question]
+                                  modOnly:
+                                    type: number
+                                    description: Whether this post is only visible to admins and global moderators (0 or 1)
                                   user:
                                     type: object
                                     properties:

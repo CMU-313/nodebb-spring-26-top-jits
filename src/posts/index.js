@@ -113,6 +113,12 @@ Posts.modifyPostByPrivilege = function (post, privileges) {
 			post.user.signature = '';
 		}
 	}
+	if (post && post.modOnly && !privileges.isAdminOrMod) {
+		post.content = '[[topic:post-is-mod-only]]';
+		if (post.user) {
+			post.user.signature = '';
+		}
+	}
 };
 
 require('../promisify')(Posts);
