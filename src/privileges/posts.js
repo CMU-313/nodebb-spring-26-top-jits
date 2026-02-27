@@ -111,7 +111,7 @@ privsPosts.filter = async function (privilege, pids, uid) {
 	pids = postData.filter(post => (
 		post.topic &&
 		cidsSet.has(post.topic.cid) &&
-		(!post.modOnly || isAdminOrGlobalMod) &&
+		(!post.modOnly || isAdminOrGlobalMod || parseInt(post.uid, 10) === parseInt(uid, 10)) &&
 		(privsTopics.canViewDeletedScheduled({
 			deleted: post.topic.deleted || post.deleted,
 			scheduled: post.topic.scheduled,
