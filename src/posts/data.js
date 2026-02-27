@@ -99,5 +99,8 @@ function modifyPost(post, fields) {
 		} else {
 			post.anonymous = false;
 		}
+		if (typeof post.modOnly === 'undefined' || post.modOnly === null) {
+			post.modOnly = 0;
+		}
 	}
 }

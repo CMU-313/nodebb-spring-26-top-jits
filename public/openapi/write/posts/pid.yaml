@@ -112,6 +112,11 @@ put:
               type: string
               description: Topic title, only accepted for main posts
               example: New title
+            postType:
+              type: string
+              description: The type of post
+              enum: [post, question]
+              example: post
             modOnly:
               type: boolean
               description: If true, this post will only be visible to admins and global moderators. Only privileged users can set this flag.

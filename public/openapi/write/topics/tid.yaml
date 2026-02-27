@@ -55,9 +55,6 @@ post:
               type: boolean
               description: If true, this reply will only be visible to admins and global moderators. Only privileged users can set this flag.
               example: false
-            anonymous:
-              type: boolean
-              description: Whether to create this reply in anonymous mode.
           required:
             - content
   responses:
