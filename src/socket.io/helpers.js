@@ -35,6 +35,18 @@ async function notifyUids(uid, uids, type, result) {
 	const post = result.posts[0];
 	const { tid, cid } = post.topic;
 	uids = await privileges.topics.filterUids('topics:read', tid, uids);
+	
+	const postModOnly = await posts.getPostField(post.pid, 'modOnly');
+	if (postModOnly) {
+		const isAdminOrGlobalModUids = await user.isAdminOrGlobalMod(uids);
+		uids = uids.filter((toUid, index) => {
+			if (parseInt(toUid, 10) === parseInt(post.uid, 10)) {
+				return true;
+			}
+			return isAdminOrGlobalModUids[index];
+		});
+	}
+	
 	const watchStateUids = uids;
 
 	const watchStates = await getWatchStates(watchStateUids, tid, cid);
