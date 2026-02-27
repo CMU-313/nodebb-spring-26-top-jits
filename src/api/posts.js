@@ -30,14 +30,20 @@ postsAPI.get = async function (caller, data) {
 	]);
 	const userPrivilege = userPrivileges[0];
 
-	if (!post || !userPrivilege.read || !userPrivilege['topics:read']) {
+	if (!post) {
+		return null;
+	}
+
+	const selfPost = caller.uid && caller.uid === parseInt(post.uid, 10);
+	const canRead = selfPost ? true : (userPrivilege.read && userPrivilege['topics:read']);
+
+	if (!canRead) {
 		return null;
 	}
 
 	Object.assign(post, voted);
 	post.ip = userPrivilege.isAdminOrMod ? post.ip : undefined;
 
-	const selfPost = caller.uid && caller.uid === parseInt(post.uid, 10);
 	if (post.deleted && !(userPrivilege.isAdminOrMod || selfPost)) {
 		post.content = '[[topic:post-is-deleted]]';
 	}

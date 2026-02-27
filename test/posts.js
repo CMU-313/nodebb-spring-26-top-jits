@@ -17,6 +17,7 @@ const privileges = require('../src/privileges');
 const user = require('../src/user');
 const groups = require('../src/groups');
 const socketPosts = require('../src/socket.io/posts');
+const socketTopics = require('../src/socket.io/topics');
 const apiPosts = require('../src/api/posts');
 const apiTopics = require('../src/api/topics');
 const meta = require('../src/meta');
@@ -1425,6 +1426,7 @@ describe('Post\'s', () => {
 				name: 'Mod-Only Test Category',
 				description: 'Category for mod-only testing',
 			}));
+			await privileges.categories.give(['groups:topics:read'], modOnlyCid, 'registered-users');
 		});
 
 		it('should create a post with modOnly flag set to 1', async () => {
@@ -1643,6 +1645,36 @@ describe('Post\'s', () => {
 			const result = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
 			assert(result);
 			assert.strictEqual(result.pid, modOnlyPost.pid);
+		});
+
+		it('should allow post owner to see their own modOnly post', async () => {
+			const ownerResult = await topics.post({
+				uid: regularUid,
+				cid: modOnlyCid,
+				title: 'Owner modOnly Topic',
+				content: 'Owner private content',
+				modOnly: true,
+			});
+			const ownerPostId = ownerResult.postData.pid;
+
+			const result = await apiPosts.get({ uid: regularUid }, { pid: ownerPostId });
+			assert(result);
+			assert.strictEqual(result.pid, ownerPostId);
+			assert.strictEqual(result.content, 'Owner private content');
+		});
+
+		it('should allow post owner to see their own modOnly reply', async () => {
+			const replyResult = await topics.reply({
+				uid: regularUid,
+				tid: modOnlyTopic.tid,
+				content: 'Owner reply private content',
+				modOnly: true,
+			});
+
+			const result = await apiPosts.get({ uid: regularUid }, { pid: replyResult.pid });
+			assert(result);
+			assert.strictEqual(result.pid, replyResult.pid);
+			assert.strictEqual(result.content, 'Owner reply private content');
 		});
 	});
 });
