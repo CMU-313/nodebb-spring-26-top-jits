@@ -83,6 +83,22 @@ function modifyPost(post, fields) {
 		if (typeof post.postType === 'undefined' || post.postType === null) {
 			post.postType = Posts.DEFAULT_POST_TYPE;
 		}
+
+		if (post.hasOwnProperty('anonymous')) {
+			post.anonymous = post.anonymous === true || post.anonymous === 1 || post.anonymous === '1' || post.anonymous === 'true';
+		} else {
+			post.anonymous = false;
+		}
+		
+		if (typeof post.modOnly === 'undefined' || post.modOnly === null) {
+			post.modOnly = 0;
+		}
+
+		if (post.hasOwnProperty('anonymous')) {
+			post.anonymous = post.anonymous === true || post.anonymous === 1 || post.anonymous === '1' || post.anonymous === 'true';
+		} else {
+			post.anonymous = false;
+		}
 		if (typeof post.modOnly === 'undefined' || post.modOnly === null) {
 			post.modOnly = 0;
 		}

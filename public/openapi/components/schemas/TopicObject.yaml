@@ -112,6 +112,9 @@ TopicObject:
             timestampISO:
               type: string
               description: An ISO 8601 formatted date string (complementing `timestamp`)
+            anonymous:
+              type: boolean
+              description: Whether this topic was created with anonymous mode enableds
             postType:
               type: string
               description: The type of post
@@ -273,6 +276,9 @@ TopicObjectSlim:
           type: number
         votes:
           type: number
+        anonymous:
+          type: boolean
+          description: Whether this topic was created with anonymous mode enabled
         teaserPid:
           oneOf:
             - type: number

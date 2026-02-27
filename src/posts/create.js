@@ -32,6 +32,8 @@ module.exports = function (Posts) {
 		postData.postType = Posts.normalizePostType(data.postType);
 		postData.modOnly = data.modOnly ? 1 : 0;
 
+		postData.anonymous = data.anonymous === true;
+
 		if (data.toPid) {
 			postData.toPid = data.toPid;
 		}

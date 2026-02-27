@@ -37,6 +37,9 @@ post:
               type: string
               description: The type of topic to create
               enum: [note, question]
+            anonymous:
+              type: boolean
+              description: Whether to create the topic and main post in anonymous mode.
             modOnly:
               type: boolean
               description: If true, the main post will only be visible to admins and global moderators. Only privileged users can set this flag.

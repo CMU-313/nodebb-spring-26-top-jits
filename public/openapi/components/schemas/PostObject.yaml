@@ -28,6 +28,9 @@ PostObject:
       type: number
     deleted:
       type: boolean
+    anonymous:
+      type: boolean
+      description: Whether this post was created with anonymous mode enabled.
     upvotes:
       type: number
     downvotes:
@@ -202,6 +205,9 @@ PostDataObject:
           type: string
         index:
           type: number
+        anonymous:
+          type: boolean
+          description: Whether this topic was created with anonymous mode enabled
         postType:
           type: string
           description: The type of post
