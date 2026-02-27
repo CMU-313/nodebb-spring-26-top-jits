@@ -32,6 +32,13 @@
 			<!-- IMPORT partials/composer-tags.tpl -->
 			{{{ end }}}
 
+			<div class="anon-post-container d-flex align-items-center gap-2 px-1">
+				<input type="checkbox" id="anonymous-post" class="form-check-input m-0" />
+				<label for="anonymous-post" class="form-check-label text-xs text-muted user-select-none">
+					<i class="fa fa-user-secret"></i> Post anonymously
+				</label>
+			</div>
+
 			<div class="imagedrop"><div>[[topic:composer.drag-and-drop-images]]</div></div>
 
 			<div class="resizer position-absolute w-100 bottom-100 pe-3 border-bottom">

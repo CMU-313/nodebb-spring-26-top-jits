@@ -732,6 +732,9 @@ define('composer', [
 			return composerAlert(post_uuid, '[[error:scheduling-to-past]]');
 		}
 
+		var anonymousEl = postContainer.find('#anonymous-post');
+		var isAnonymous = anonymousEl.length ? anonymousEl.is(':checked') : false;
+
 		let composerData = {
 			uuid: post_uuid,
 		};
@@ -751,6 +754,7 @@ define('composer', [
 				thumbs: postData.thumbs || [],
 				timestamp: scheduler.getTimestamp(),
 				topicType: postData.topicType,
+				anonymous: isAnonymous,
 			};
 		} else if (action === 'posts.reply') {
 			route = `/topics/${postData.tid}`;
@@ -760,6 +764,7 @@ define('composer', [
 				handle: handleEl ? handleEl.val() : undefined,
 				content: bodyEl.val(),
 				toPid: postData.toPid,
+				anonymous: isAnonymous,
 			};
 		} else if (action === 'posts.edit') {
 			method = 'put';
