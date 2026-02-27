@@ -10,7 +10,7 @@
 
 		<div class="d-flex p-0 col-12 col-lg-7 gap-2 gap-lg-3 pe-1 align-items-start {{{ if config.theme.mobileTopicTeasers }}}mb-2 mb-lg-0{{{ end }}}">
 			<div class="flex-shrink-0 position-relative">
-			{{{ if (!./anonymous || ./selfPost || privileges.isAdminOrMod) }}}
+			{{{ if (!./anonymous || (./selfPost || privileges.isAdminOrMod)) }}}
 			<a class="d-inline-block text-decoration-none avatar-tooltip" title="{./user.displayname}" href="{{{ if ./user.userslug }}}{config.relative_path}/user/{./user.userslug}{{{ else }}}#{{{ end }}}">
 				{buildAvatar(./user, "40px", true)}
 			</a>
@@ -131,7 +131,7 @@
 					{{{ else }}}
 					{{{ if ./teaser.pid }}}
 					<div class="ps-2">
-					{{{ if (!./teaser.anonymous) }}}
+					{{{ if !./teaser.anonymous }}}
 					<a href="{{{ if ./teaser.user.userslug }}}{config.relative_path}/user/{./teaser.user.userslug}{{{ else }}}#{{{ end }}}" class="text-decoration-none avatar-tooltip" title="{./teaser.user.displayname}">{buildAvatar(./teaser.user, "18px", true)}</a>
 					{{{ else }}}
 					<span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:18px;height:18px;font-size:9px;" title="Anonymous">
