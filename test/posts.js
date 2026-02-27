@@ -336,7 +336,7 @@ describe('Post\'s', () => {
 			});
 			await expectPostType(topic.postData.pid, QUESTION_POST_TYPE);
 		});
-		
+
 		it('should create a post with post as the post type', async () => {
 			const ownerUid = await user.create({ username: 'owner user' });
 			const topic = await topics.post({
@@ -374,7 +374,7 @@ describe('Post\'s', () => {
 			let postType = await posts.getPostField(pid, 'postType');
 			const content = topic.postData.content;
 			await expectPostType(topic.postData.pid, POST_POST_TYPE);
-			
+
 			await apiPosts.edit({ uid: uid }, { pid: pid, content: content, postType: 'question' });
 			await expectPostType(topic.postData.pid, QUESTION_POST_TYPE);
 
@@ -1647,231 +1647,242 @@ describe('Post\'s', () => {
 	});
 });
 
+// Frontend Private Posts - Backend Integration Tests
+// Tests for frontend-specific backend functionality (UI data structure, filtering, API responses)
+describe('Private Posts - Frontend Backend Integration', () => {
+	let adminUid;
+	let globalModUid;
+	let regularUid;
+	let frontendCid;
+	let modOnlyPost;
+	let normalPost;
+	let topicWithMixedPosts;
+	let privateReply;
+	let normalReply;
+
+	before(async () => {
+		adminUid = await user.create({ username: 'frontend_backend_admin', password: 'adminpass123' });
+		await groups.join('administrators', adminUid);
+		globalModUid = await user.create({ username: 'frontend_backend_globalmod', password: 'globalmodpass123' });
+		await groups.join('Global Moderators', globalModUid);
+		regularUid = await user.create({ username: 'frontend_backend_regular', password: 'regularpass123' });
+		({ cid: frontendCid } = await categories.create({
+			name: 'Frontend Backend Test Category',
+			description: 'Category for frontend backend testing',
+		}));
+	});
+
+	beforeEach(async () => {
+		const topicResult = await topics.post({
+			uid: adminUid,
+			cid: frontendCid,
+			title: 'Mixed Content Topic',
+			content: 'Main content',
+			modOnly: false,
+		});
+		topicWithMixedPosts = topicResult;
+
+		privateReply = await topics.reply({
+			uid: adminUid,
+			tid: topicWithMixedPosts.topicData.tid,
+			content: 'Private reply content for frontend',
+			modOnly: true,
+		});
+
+		normalReply = await topics.reply({
+			uid: regularUid,
+			tid: topicWithMixedPosts.topicData.tid,
+			content: 'Normal reply content for frontend',
+			modOnly: false,
+		});
+
+		const postResult = await topics.post({
+			uid: adminUid,
+			cid: frontendCid,
+			title: 'Frontend Test Topic',
+			content: 'Frontend test content',
+			modOnly: true,
+		});
+		modOnlyPost = postResult.postData;
+
+		const normalResult = await topics.post({
+			uid: regularUid,
+			cid: frontendCid,
+			title: 'Normal Frontend Topic',
+			content: 'Normal frontend content',
+			modOnly: false,
+		});
+		normalPost = normalResult.postData;
+	});
+
+	describe('Frontend post data structure', () => {
+		it('should include modOnly field in API get response for admin', async () => {
+			const postData = await apiPosts.get({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(postData);
+			assert.strictEqual(postData.modOnly, 1);
+		});
+
+		it('should include modOnly field in post summary for privileged users', async () => {
+			const summary = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(summary);
+			assert.strictEqual(summary.modOnly, 1);
+		});
+
+		it('should include modOnly field in normal post summary', async () => {
+			const summary = await apiPosts.getSummary({ uid: regularUid }, { pid: normalPost.pid });
+			assert(summary);
+			assert.strictEqual(summary.modOnly, 0);
+		});
+
+		it('should include isModOnly flag in privilege flags for modOnly posts', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
+			assert.strictEqual(privs[0].isModOnly, true);
+		});
+
+		it('should include isModOnly=false for normal posts', async () => {
+			const privs = await privileges.posts.get([normalPost.pid], regularUid);
+			assert.strictEqual(privs[0].isModOnly, false);
+		});
+	});
+
+	describe('Frontend filtering logic', () => {
+		it('should filter private replies from regular user view', async () => {
+			const allPids = [topicWithMixedPosts.postData.pid, privateReply.pid, normalReply.pid];
+			const filteredPids = await privileges.posts.filter('topics:read', allPids, regularUid);
+
+			assert(filteredPids.includes(topicWithMixedPosts.postData.pid));
+			assert(filteredPids.includes(normalReply.pid));
+			assert(!filteredPids.includes(privateReply.pid), 'Private reply should be filtered for regular user');
+		});
+
+		it('should include all posts in admin view', async () => {
+			const allPids = [topicWithMixedPosts.postData.pid, privateReply.pid, normalReply.pid];
+			const filteredPids = await privileges.posts.filter('topics:read', allPids, adminUid);
+
+			assert(filteredPids.includes(topicWithMixedPosts.postData.pid));
+			assert(filteredPids.includes(privateReply.pid));
+			assert(filteredPids.includes(normalReply.pid));
+		});
+
+		it('should filter private posts for global moderator with different category', async () => {
+			const otherCid = await categories.create({
+				name: 'Other Category',
+				description: 'Other category',
+			});
+
+			const otherTopic = await topics.post({
+				uid: adminUid,
+				cid: otherCid.cid,
+				title: 'Other Topic',
+				content: 'Other content',
+				modOnly: true,
+			});
+
+			const allPids = [otherTopic.postData.pid];
+			const filteredPids = await privileges.posts.filter('topics:read', allPids, regularUid);
+
+			assert(!filteredPids.includes(otherTopic.postData.pid));
+		});
+
+		it('should respect modOnly filtering in mixed post chains', async () => {
+			const mixedTopic = await topics.post({
+				uid: adminUid,
+				cid: frontendCid,
+				title: 'Mixed Chain',
+				content: 'Starting content for mixed chain topic',
+				modOnly: false,
+			});
+
+			const privatePost1 = await topics.reply({
+				uid: adminUid,
+				tid: mixedTopic.topicData.tid,
+				content: 'This is private reply number one content',
+				modOnly: true,
+			});
+
+			const normalPost2 = await topics.reply({
+				uid: regularUid,
+				tid: mixedTopic.topicData.tid,
+				content: 'This is normal reply content here',
+				modOnly: false,
+			});
+
+			const privatePost2 = await topics.reply({
+				uid: adminUid,
+				tid: mixedTopic.topicData.tid,
+				content: 'This is private reply number two content',
+				modOnly: true,
+			});
+
+			const allPids = [
+				mixedTopic.postData.pid,
+				privatePost1.pid,
+				normalPost2.pid,
+				privatePost2.pid,
+			];
+
+			const filteredForRegular = await privileges.posts.filter('topics:read', allPids, regularUid);
+			const filteredForAdmin = await privileges.posts.filter('topics:read', allPids, adminUid);
+
+			assert(filteredForRegular.includes(mixedTopic.postData.pid));
+			assert(!filteredForRegular.includes(privatePost1.pid));
+			assert(filteredForRegular.includes(normalPost2.pid));
+			assert(!filteredForRegular.includes(privatePost2.pid));
+
+			assert(filteredForAdmin.includes(mixedTopic.postData.pid));
+			assert(filteredForAdmin.includes(privatePost1.pid));
+			assert(filteredForAdmin.includes(normalPost2.pid));
+			assert(filteredForAdmin.includes(privatePost2.pid));
+		});
+	});
+
+	describe('Frontend API response structure', () => {
+		it('should return modOnly flag in get API response', async () => {
+			const result = await apiPosts.get({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert(result.hasOwnProperty('modOnly'));
+			assert.strictEqual(result.modOnly, 1);
+		});
+
+		it('should return modOnly flag in getSummary API response', async () => {
+			const result = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
+			assert(result);
+			assert(result.hasOwnProperty('modOnly'));
+			assert.strictEqual(result.modOnly, 1);
+		});
+
+		it('should include isAdminOrMod flag in privileges for admin', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], adminUid);
+			assert.strictEqual(privs[0].isAdminOrMod, true);
+		});
+
+		it('should include isAdminOrMod flag in privileges for global moderator', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], globalModUid);
+			assert.strictEqual(privs[0].isAdminOrMod, true);
+		});
+
+		it('should NOT include isAdminOrMod flag for regular users', async () => {
+			const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
+			assert.strictEqual(privs[0].isAdminOrMod, false);
+		});
+	});
+
+	after(async () => {
+		await db.delete(`cid:${frontendCid}:tids`);
+		await db.delete(`cid:${frontendCid}:posts`);
+	});
+});
+
 describe('Posts\'', async () => {
+	let files;
 
-	// Frontend Private Posts - Backend Integration Tests
-	// Tests for frontend-specific backend functionality (UI data structure, filtering, API responses)
-	describe('Private Posts - Frontend Backend Integration', () => {
-		let adminUid;
-		let globalModUid;
-		let regularUid;
-		let frontendCid;
-		let modOnlyPost;
-		let normalPost;
-		let topicWithMixedPosts;
-		let privateReply;
-		let normalReply;
+	before(async () => {
+		files = await file.walk(path.resolve(__dirname, './posts'));
+	});
 
-		before(async () => {
-			adminUid = await user.create({ username: 'frontend_backend_admin', password: 'adminpass123' });
-			await groups.join('administrators', adminUid);
-			globalModUid = await user.create({ username: 'frontend_backend_globalmod', password: 'globalmodpass123' });
-			await groups.join('Global Moderators', globalModUid);
-			regularUid = await user.create({ username: 'frontend_backend_regular', password: 'regularpass123' });
-			({ cid: frontendCid } = await categories.create({
-				name: 'Frontend Backend Test Category',
-				description: 'Category for frontend backend testing',
-			}));
-		});
-
-		beforeEach(async () => {
-			const topicResult = await topics.post({
-				uid: adminUid,
-				cid: frontendCid,
-				title: 'Mixed Content Topic',
-				content: 'Main content',
-				modOnly: false,
-			});
-			topicWithMixedPosts = topicResult;
-			
-			privateReply = await topics.reply({
-				uid: adminUid,
-				tid: topicWithMixedPosts.topicData.tid,
-				content: 'Private reply content for frontend',
-				modOnly: true,
-			});
-
-			normalReply = await topics.reply({
-				uid: regularUid,
-				tid: topicWithMixedPosts.topicData.tid,
-				content: 'Normal reply content for frontend',
-				modOnly: false,
-			});
-			
-			const postResult = await topics.post({
-				uid: adminUid,
-				cid: frontendCid,
-				title: 'Frontend Test Topic',
-				content: 'Frontend test content',
-				modOnly: true,
-			});
-			modOnlyPost = postResult.postData;
-			
-			const normalResult = await topics.post({
-				uid: regularUid,
-				cid: frontendCid,
-				title: 'Normal Frontend Topic',
-				content: 'Normal frontend content',
-				modOnly: false,
-			});
-			normalPost = normalResult.postData;
-		});
-
-		describe('Frontend post data structure', () => {
-			it('should include modOnly field in API get response for admin', async () => {
-				const postData = await apiPosts.get({ uid: adminUid }, { pid: modOnlyPost.pid });
-				assert(postData);
-				assert.strictEqual(postData.modOnly, 1);
-			});
-
-			it('should include modOnly field in post summary for privileged users', async () => {
-				const summary = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
-				assert(summary);
-				assert.strictEqual(summary.modOnly, 1);
-			});
-
-			it('should include modOnly field in normal post summary', async () => {
-				const summary = await apiPosts.getSummary({ uid: regularUid }, { pid: normalPost.pid });
-				assert(summary);
-				assert.strictEqual(summary.modOnly, 0);
-			});
-
-			it('should include isModOnly flag in privilege flags for modOnly posts', async () => {
-				const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
-				assert.strictEqual(privs[0].isModOnly, true);
-			});
-
-			it('should include isModOnly=false for normal posts', async () => {
-				const privs = await privileges.posts.get([normalPost.pid], regularUid);
-				assert.strictEqual(privs[0].isModOnly, false);
-			});
-		});
-
-		describe('Frontend filtering logic', () => {
-			it('should filter private replies from regular user view', async () => {
-				const allPids = [topicWithMixedPosts.postData.pid, privateReply.pid, normalReply.pid];
-				const filteredPids = await privileges.posts.filter('topics:read', allPids, regularUid);
-				
-				assert(filteredPids.includes(topicWithMixedPosts.postData.pid));
-				assert(filteredPids.includes(normalReply.pid));
-				assert(!filteredPids.includes(privateReply.pid), 'Private reply should be filtered for regular user');
-			});
-
-			it('should include all posts in admin view', async () => {
-				const allPids = [topicWithMixedPosts.postData.pid, privateReply.pid, normalReply.pid];
-				const filteredPids = await privileges.posts.filter('topics:read', allPids, adminUid);
-				
-				assert(filteredPids.includes(topicWithMixedPosts.postData.pid));
-				assert(filteredPids.includes(privateReply.pid));
-				assert(filteredPids.includes(normalReply.pid));
-			});
-
-			it('should filter private posts for global moderator with different category', async () => {
-				const otherCid = await categories.create({
-					name: 'Other Category',
-					description: 'Other category',
-				});
-				
-				const otherTopic = await topics.post({
-					uid: adminUid,
-					cid: otherCid.cid,
-					title: 'Other Topic',
-					content: 'Other content',
-					modOnly: true,
-				});
-				
-				const allPids = [otherTopic.postData.pid];
-				const filteredPids = await privileges.posts.filter('topics:read', allPids, regularUid);
-				
-				assert(!filteredPids.includes(otherTopic.postData.pid));
-			});
-
-			it('should respect modOnly filtering in mixed post chains', async () => {
-				const mixedTopic = await topics.post({
-					uid: adminUid,
-					cid: frontendCid,
-					title: 'Mixed Chain',
-					content: 'Starting content for mixed chain topic',
-					modOnly: false,
-				});
-				
-				const privatePost1 = await topics.reply({
-					uid: adminUid,
-					tid: mixedTopic.topicData.tid,
-					content: 'This is private reply number one content',
-					modOnly: true,
-				});
-				
-				const normalPost2 = await topics.reply({
-					uid: regularUid,
-					tid: mixedTopic.topicData.tid,
-					content: 'This is normal reply content here',
-					modOnly: false,
-				});
-				
-				const privatePost2 = await topics.reply({
-					uid: adminUid,
-					tid: mixedTopic.topicData.tid,
-					content: 'This is private reply number two content',
-					modOnly: true,
-				});
-				
-				const allPids = [
-					mixedTopic.postData.pid,
-					privatePost1.pid,
-					normalPost2.pid,
-					privatePost2.pid,
-				];
-				
-				const filteredForRegular = await privileges.posts.filter('topics:read', allPids, regularUid);
-				const filteredForAdmin = await privileges.posts.filter('topics:read', allPids, adminUid);
-				
-				assert(filteredForRegular.includes(mixedTopic.postData.pid));
-				assert(!filteredForRegular.includes(privatePost1.pid));
-				assert(filteredForRegular.includes(normalPost2.pid));
-				assert(!filteredForRegular.includes(privatePost2.pid));
-				
-				assert(filteredForAdmin.includes(mixedTopic.postData.pid));
-				assert(filteredForAdmin.includes(privatePost1.pid));
-				assert(filteredForAdmin.includes(normalPost2.pid));
-				assert(filteredForAdmin.includes(privatePost2.pid));
-			});
-		});
-
-		describe('Frontend API response structure', () => {
-			it('should return modOnly flag in get API response', async () => {
-				const result = await apiPosts.get({ uid: adminUid }, { pid: modOnlyPost.pid });
-				assert(result);
-				assert(result.hasOwnProperty('modOnly'));
-				assert.strictEqual(result.modOnly, 1);
-			});
-
-			it('should return modOnly flag in getSummary API response', async () => {
-				const result = await apiPosts.getSummary({ uid: adminUid }, { pid: modOnlyPost.pid });
-				assert(result);
-				assert(result.hasOwnProperty('modOnly'));
-				assert.strictEqual(result.modOnly, 1);
-			});
-
-			it('should include isAdminOrMod flag in privileges for admin', async () => {
-				const privs = await privileges.posts.get([modOnlyPost.pid], adminUid);
-				assert.strictEqual(privs[0].isAdminOrMod, true);
-			});
-
-			it('should include isAdminOrMod flag in privileges for global moderator', async () => {
-				const privs = await privileges.posts.get([modOnlyPost.pid], globalModUid);
-				assert.strictEqual(privs[0].isAdminOrMod, true);
-			});
-
-			it('should NOT include isAdminOrMod flag for regular users', async () => {
-				const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
-				assert.strictEqual(privs[0].isAdminOrMod, false);
-			});
-		});
-
-		after(async () => {
-			await db.delete(`cid:${frontendCid}:tids`);
-			await db.delete(`cid:${frontendCid}:posts`);
+	it('subfolder tests', () => {
+		files.forEach((filePath) => {
+			require(filePath);
 		});
 	});
 });
