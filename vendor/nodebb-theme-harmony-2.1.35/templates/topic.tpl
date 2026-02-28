@@ -80,6 +80,11 @@
 				<!-- IMPORT partials/topic/deleted-message.tpl -->
 				{{{ end }}}
 				<!-- IMPORT partials/topic/solved-message.tpl -->
+				{{{ if allPostsPrivate }}}
+				<div class="alert alert-warning" role="alert">
+					<i class="fa fa-lock"></i> [[topic:all-posts-private]]
+				</div>
+				{{{ end }}}
 
 				<div class="d-flex gap-0 gap-lg-5">
 					<div class="posts-container" style="min-width: 0;">

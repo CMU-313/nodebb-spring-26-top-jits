@@ -233,6 +233,13 @@
 	.preview {
 		padding: $input-padding-y $input-padding-x;
 	}
+
+	.private-post-toggle {
+		i.fa-lock {
+			color: var(--warning);
+			font-weight: bold;
+		}
+	}
 }
 
 .datetime-picker {

@@ -8,7 +8,7 @@
 {{{ if (./parent && !hideParent) }}}
 <!-- IMPORT partials/topic/post-parent.tpl -->
 {{{ end }}}
-<div class="d-flex align-items-start gap-3 post-container-parent">
+<div data-pid="{./pid}" class="d-flex align-items-start gap-3 post-container-parent">
 	<div class="bg-body d-none d-sm-block rounded-circle" style="outline: 2px solid var(--bs-body-bg);">
 		{{{ if (!./anonymous || (./selfPost || privileges.isAdminOrMod)) }}}
 		<a class="d-inline-block position-relative text-decoration-none" href="{{{ if ./user.userslug }}}{config.relative_path}/user/{./user.userslug}{{{ else }}}#{{{ end }}}" aria-label="[[aria:profile-page-for, {./user.displayname}]]">
@@ -79,6 +79,12 @@
 
 					<i component="post/edit-indicator" class="fa fa-edit text-muted{{{ if privileges.posts:history }}} pointer{{{ end }}} edit-icon {{{ if !posts.editor.username }}}hidden{{{ end }}}" title="[[global:edited-timestamp, {isoTimeToLocaleString(./editedISO, config.userLang)}]]"></i>
 					<span data-editor="{posts.editor.userslug}" component="post/editor" class="visually-hidden">[[global:last-edited-by, {posts.editor.username}]] <span class="timeago" title="{isoTimeToLocaleString(posts.editedISO, config.userLang)}"></span></span>
+
+					{{{ if ./modOnly }}}
+					<span class="badge bg-warning text-dark ms-2" title="[[topic:post-is-mod-only]]" component="post/private-badge">
+						<i class="fa fa-lock"></i> [[global:private]]
+					</span>
+					{{{ end }}}
 				</div>
 
 				{{{ if (!./anonymous || (./selfPost || privileges.isAdminOrMod)) }}}

@@ -48,6 +48,7 @@ $(document).ready(function () {
 					toPid: data.pid,
 					title: data.title,
 					body: data.body,
+					isPrivate: data.modOnly ? 1 : 0,
 				});
 			});
 		} else {
@@ -55,7 +56,8 @@ $(document).ready(function () {
 				'compose?tid=' + data.tid +
 				(data.pid ? '&toPid=' + data.pid : '') +
 				(data.title ? '&title=' + encodeURIComponent(data.title) : '') +
-				(data.body ? '&body=' + encodeURIComponent(data.body) : '')
+				(data.body ? '&body=' + encodeURIComponent(data.body) : '') +
+				(data.modOnly ? '&modOnly=' + data.modOnly : '')
 			);
 		}
 	});

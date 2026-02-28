@@ -151,5 +151,6 @@
     "sort": "Sort",
     "actions": "Actions",
     "rss-feed": "RSS Feed",
-    "skip-to-content": "Skip to content"
+    "skip-to-content": "Skip to content",
+    "private": "Private"
 }

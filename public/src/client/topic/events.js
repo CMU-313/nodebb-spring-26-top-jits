@@ -118,6 +118,20 @@ define('forum/topic/events', [
 			return ajaxify.go('topic/' + data.topic.slug, null, true);
 		}
 
+		if (data.post.hasOwnProperty('modOnly')) {
+			const privateBadge = postContainer.find('[component="post/private-badge"]');
+			const hasPrivateBadge = privateBadge.length > 0;
+			
+			if (data.post.modOnly && !hasPrivateBadge) {
+				translator.translate('[[global:private]]', function (translated) {
+					const badgeHtml = `<span class="badge bg-warning text-dark ms-2" title="[[topic:post-is-mod-only]]"><i class="fa fa-lock"></i> ${translated}</span>`;
+					editorEl.after(badgeHtml);
+				});
+			} else if (!data.post.modOnly && hasPrivateBadge) {
+				privateBadge.remove();
+			}
+		}
+
 		if (topicTitle.length && data.topic.title && data.topic.renamed) {
 			ajaxify.data.title = data.topic.title;
 			const newUrl = 'topic/' + data.topic.slug + (window.location.search ? window.location.search : '');

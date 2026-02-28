@@ -161,7 +161,15 @@ module.exports = function (Topics) {
 
 	Topics.modifyPostsByPrivilege = function (topicData, topicPrivileges) {
 		const loggedIn = parseInt(topicPrivileges.uid, 10) > 0;
+		const allPostsPrivate = topicData.posts.length > 0 && topicData.posts.every(post => post.modOnly);
+		const visiblePosts = topicData.posts.filter(post => post && (!post.modOnly || topicPrivileges.isAdminOrMod));
+		const allVisiblePostsPrivate = visiblePosts.length === 0 && allPostsPrivate;
 		topicData.posts = topicData.posts.filter(post => post && (!post.modOnly || topicPrivileges.isAdminOrMod));
+		
+		if (allVisiblePostsPrivate && !topicPrivileges.isAdminOrMod) {
+			topicData.allPostsPrivate = true;
+		}
+		
 		topicData.posts.forEach((post) => {
 			if (post) {
 				post.topicOwnerPost = parseInt(topicData.uid, 10) === parseInt(post.uid, 10);
