@@ -35,7 +35,8 @@ postsAPI.get = async function (caller, data) {
 	}
 
 	const selfPost = caller.uid && caller.uid === parseInt(post.uid, 10);
-	const canRead = selfPost ? true : (userPrivilege.read && userPrivilege['topics:read']);
+	// Post owners can always read their own posts, admins/mods can read everything
+	const canRead = selfPost || userPrivilege.isAdminOrMod ? true : (userPrivilege.read && userPrivilege['topics:read']);
 
 	if (!canRead) {
 		return null;
