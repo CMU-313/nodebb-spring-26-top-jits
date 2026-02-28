@@ -17,6 +17,7 @@ const privileges = require('../src/privileges');
 const user = require('../src/user');
 const groups = require('../src/groups');
 const socketPosts = require('../src/socket.io/posts');
+const socketTopics = require('../src/socket.io/topics');
 const apiPosts = require('../src/api/posts');
 const apiTopics = require('../src/api/topics');
 const meta = require('../src/meta');
@@ -1425,6 +1426,7 @@ describe('Post\'s', () => {
 				name: 'Mod-Only Test Category',
 				description: 'Category for mod-only testing',
 			}));
+			await privileges.categories.give(['groups:topics:read'], modOnlyCid, 'registered-users');
 		});
 
 		it('should create a post with modOnly flag set to 1', async () => {
@@ -1644,6 +1646,22 @@ describe('Post\'s', () => {
 			assert(result);
 			assert.strictEqual(result.pid, modOnlyPost.pid);
 		});
+
+		it('should allow post owner to see their own modOnly post', async () => {
+			const ownerResult = await topics.post({
+				uid: regularUid,
+				cid: modOnlyCid,
+				title: 'Owner modOnly Topic',
+				content: 'Owner private content',
+				modOnly: true,
+			});
+			const ownerPostId = ownerResult.postData.pid;
+
+			const result = await apiPosts.get({ uid: regularUid }, { pid: ownerPostId });
+			assert(result);
+			assert.strictEqual(result.pid, ownerPostId);
+			assert.strictEqual(result.content, 'Owner private content');
+		});
 	});
 });
 
@@ -1670,6 +1688,7 @@ describe('Private Posts - Frontend Backend Integration', () => {
 			name: 'Frontend Backend Test Category',
 			description: 'Category for frontend backend testing',
 		}));
+		await privileges.categories.give(['groups:topics:read'], frontendCid, 'registered-users');
 	});
 
 	beforeEach(async () => {
@@ -1864,6 +1883,130 @@ describe('Private Posts - Frontend Backend Integration', () => {
 		it('should NOT include isAdminOrMod flag for regular users', async () => {
 			const privs = await privileges.posts.get([modOnlyPost.pid], regularUid);
 			assert.strictEqual(privs[0].isAdminOrMod, false);
+		});
+
+		it('should allow post owner to view their own modOnly post', async () => {
+			const regularUserModOnlyTopic = await topics.post({
+				uid: regularUid,
+				cid: frontendCid,
+				title: 'Regular User ModOnly Topic',
+				content: 'This is a modOnly post by regular user',
+				modOnly: true,
+			});
+			const result = await apiPosts.get({ uid: regularUid }, { pid: regularUserModOnlyTopic.postData.pid });
+			assert(result);
+			assert.strictEqual(result.pid, regularUserModOnlyTopic.postData.pid);
+			assert.strictEqual(result.content, 'This is a modOnly post by regular user');
+		});
+
+		it('should allow post owner to see their own modOnly reply', async () => {
+			const replyTopic = await topics.post({
+				uid: regularUid,
+				cid: frontendCid,
+				title: 'Topic for Reply Test',
+				content: 'Test content',
+			});
+			const regularUserModOnlyReply = await topics.reply({
+				uid: regularUid,
+				tid: replyTopic.topicData.tid,
+				content: 'Regular user modOnly reply',
+				modOnly: true,
+			});
+			const result = await apiPosts.get({ uid: regularUid }, { pid: regularUserModOnlyReply.pid });
+			assert(result);
+			assert.strictEqual(result.pid, regularUserModOnlyReply.pid);
+			assert.strictEqual(result.content, 'Regular user modOnly reply');
+		});
+
+		it('should NOT allow other regular users to see a regular user\'s modOnly post', async () => {
+			// Create a different regular user to test cross-user visibility
+			const anotherRegularUser = await user.create({ username: 'frontend_backend_regular2' });
+			const regularUserModOnlyTopic = await topics.post({
+				uid: regularUid,
+				cid: frontendCid,
+				title: 'Another Regular User ModOnly Topic',
+				content: 'Private content by regular user',
+				modOnly: true,
+			});
+			const result = await apiPosts.get({ uid: anotherRegularUser }, { pid: regularUserModOnlyTopic.postData.pid });
+			assert.strictEqual(result, null);
+			// Clean up the extra user
+			await user.delete(1, anotherRegularUser);
+		});
+
+		it('should allow modOnly post owner to see content via modifyPostByPrivilege', async () => {
+			const testPost = {
+				pid: 99999,
+				uid: regularUid,
+				modOnly: true,
+				content: 'Private content for owner',
+				selfPost: true,
+			};
+			const topicPrivileges = {
+				isAdminOrMod: false,
+				uid: regularUid,
+			};
+			posts.modifyPostByPrivilege(testPost, topicPrivileges);
+			assert.strictEqual(testPost.content, 'Private content for owner');
+		});
+
+		it('should hide modOnly content from non-owner users via modifyPostByPrivilege', async () => {
+			const testPost = {
+				pid: 99999,
+				uid: regularUid,
+				modOnly: true,
+				content: 'Private content for owner',
+				selfPost: false,
+			};
+			const topicPrivileges = {
+				isAdminOrMod: false,
+				uid: adminUid,
+			};
+			posts.modifyPostByPrivilege(testPost, topicPrivileges);
+			assert.strictEqual(testPost.content, '[[topic:post-is-mod-only]]');
+		});
+
+		it('should NOT leak modOnly post to unauthorized users via socket notifications', async () => {
+			// Test that admins can see modOnly posts
+			const modOnlyTopic = await topics.post({
+				uid: regularUid,
+				cid: frontendCid,
+				title: 'Private Topic for WebSocket Test',
+				content: 'This content should be visible to admins',
+				modOnly: true,
+			});
+			
+			// Admin should be able to access the modOnly post via API
+			const adminResult = await apiPosts.get({ uid: adminUid }, { pid: modOnlyTopic.postData.pid });
+			assert(adminResult);
+			assert.strictEqual(adminResult.content, 'This content should be visible to admins');
+			
+			// Regular user (not owner) should NOT be able to access the modOnly post via API
+			const anotherRegularUser = await user.create({ username: 'websocket_test_regular' });
+			const regularResult = await apiPosts.get({ uid: anotherRegularUser }, { pid: modOnlyTopic.postData.pid });
+			assert.strictEqual(regularResult, null);
+			await user.delete(1, anotherRegularUser);
+		});
+
+		it('should include modOnly post owner in notification targets', async () => {
+			const { topicData: notificationTopic } = await topics.post({
+				uid: regularUid,
+				cid: frontendCid,
+				title: 'Test Topic for Notification',
+				content: 'Test content',
+				modOnly: false,
+			});
+			const notificationPost = await topics.reply({
+				uid: regularUid,
+				tid: notificationTopic.tid,
+				content: 'Test reply',
+				modOnly: true,
+			});
+			const postModOnly = await posts.getPostField(notificationPost.pid, 'modOnly');
+			assert.strictEqual(postModOnly, 1);
+			// Admins should be able to access modOnly posts
+			const privilegedUids = await privileges.topics.filterUids('topics:read', notificationTopic.tid, [adminUid]);
+			assert(privilegedUids.includes(adminUid));
 		});
 	});
 

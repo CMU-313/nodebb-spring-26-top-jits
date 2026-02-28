@@ -272,7 +272,7 @@ async function getPostData(req) {
 	}
 
 	const postData = await posts.getPostData(req.query.pid || req.query.toPid);
-	
+
 	if (req.query.toPid && postData && req.query.tid) {
 		const topicData = await topics.getTopicData(req.query.tid);
 		if (topicData && topicData.mainPid) {
@@ -282,11 +282,11 @@ async function getPostData(req) {
 			}
 		}
 	}
-	
+
 	if (req.query.modOnly) {
 		postData.modOnly = 1;
 	}
-	
+
 	return postData;
 }
 

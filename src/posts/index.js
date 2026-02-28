@@ -113,7 +113,7 @@ Posts.modifyPostByPrivilege = function (post, privileges) {
 			post.user.signature = '';
 		}
 	}
-	if (post && post.modOnly && !privileges.isAdminOrMod) {
+	if (post && post.modOnly && !privileges.isAdminOrMod && !post.selfPost) {
 		post.content = '[[topic:post-is-mod-only]]';
 		if (post.user) {
 			post.user.signature = '';
