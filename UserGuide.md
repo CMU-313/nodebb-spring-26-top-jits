@@ -89,3 +89,76 @@ Anonymous posts are also reflected in topic list previews:
 - For **topic listings** (e.g., on a category page), if the topic's main post is anonymous, the author's avatar is replaced with the anonymous secret-agent icon
 - In **topic teasers** (the last reply preview shown beside a topic), if the latest reply is anonymous, the teaser shows the anonymous icon instead of the replier's avatar
 - For the **category "last post" previews**, anonymous posts display the anonymous icon in place of the poster's avatar
+
+# Automated Tests
+
+## Private (Mod-Only) Posts Tests
+
+Tests for private posts are located in **`test/posts.js`** under two `describe` blocks:
+
+### `describe('mod-only posts')` (around line 1409)
+
+These tests cover the core backend behavior of the `modOnly` flag:
+
+| Test | What is verified |
+|------|-----------------|
+| `modOnly` flag persists as `1` when set on topic creation | The flag is stored correctly in the database |
+| `modOnly` defaults to `0` when omitted | Non-private posts are not accidentally marked private |
+| `modOnly` reply creation stores the flag | Replies (not just main posts) can be private |
+| Admin can read a `modOnly` post via API | Admins have unrestricted access |
+| Global moderator can read a `modOnly` post via API | Moderators have unrestricted access |
+| Regular user **cannot** read a `modOnly` post via API (returns `null`) | Access control is enforced for non-privileged users |
+| Guest **cannot** read a `modOnly` post via API | Unauthenticated users are also blocked |
+| Regular user **cannot** get raw content of a `modOnly` post | Raw-content endpoint also enforces privilege |
+| Admin can get raw content | Privileged raw-content access is unaffected |
+| Filtering removes `modOnly` posts from regular user views and keeps them for admins/global mods | The `privileges.posts.filter` path works correctly for all three roles |
+| Admin and global moderator can toggle `modOnly` via edit | Privileged users can change post visibility after creation |
+| Regular user **cannot** set `modOnly` via edit (throws `[[error:no-privileges]]`) | Privilege enforcement during edits |
+| Correct `read`, `topics:read`, `isModOnly`, `isAdminOrMod` privilege flags returned per role | All flags consumed by the frontend are accurate |
+| `modifyPostByPrivilege` replaces content with `[[topic:post-is-mod-only]]` for non-privileged users | The in-memory content scrubbing path works |
+| `modifyPostByPrivilege` **does not** change content for privileged users | Privileged rendering is unaffected |
+| Guest **cannot** access via `getSummary`; admin **can** | Summary API respects the same access rules |
+| Post owner (regular user) can see their own `modOnly` post | Authors are not locked out of their own private posts |
+
+### `describe('Private Posts - Frontend Backend Integration')` (around line 1668)
+
+These tests cover the data structures and filtering logic the frontend depends on:
+
+| Test group | What is verified |
+|------------|-----------------|
+| **Frontend post data structure** | `modOnly` field appears in `get` and `getSummary` API responses; `isModOnly` privilege flag is set/unset correctly |
+| **Frontend filtering logic** | `privileges.posts.filter` removes private replies from regular user views, keeps them for admins, and handles mixed public/private post chains |
+| **Frontend API response structure** | `isAdminOrMod` is `true` for admins and global mods, `false` for regular users; post owners can view their own private posts and replies; cross-user access is blocked; `modifyPostByPrivilege` hides/shows content based on `selfPost` and `isAdminOrMod`; admin access via socket-style API calls is verified |
+
+**Why these tests are sufficient:** They cover every role (guest, regular user, post owner, global moderator, admin) across every access path (direct API `get`, `getRaw`, `getSummary`, `filter`, `modifyPostByPrivilege`, and edit). Both creation-time defaults and post-edit toggling are exercised, ensuring the privilege system cannot be bypassed through any of the exposed endpoints.
+
+---
+
+## Anonymous Posts Tests
+
+Tests for anonymous posts are split across two files.
+
+### `test/anonymous-posts.js` (entire file)
+
+This file tests the frontend-facing behavior of the `anonymous` flag end-to-end via the HTTP API and topic/post data layer:
+
+| Test group | What is verified |
+|------------|-----------------|
+| **HTTP API accepts `anonymous` flag in topic creation** | Sending `anonymous: true` and `anonymous: false` in a `POST /api/v3/topics` request both return `status.code: 'ok'` — the API does not reject the field |
+| **HTTP API accepts `anonymous` flag in replies** | Same acceptance check for `POST /api/v3/topics/:tid` |
+| **Author identity is always preserved** | The real `uid` is stored regardless of the `anonymous` flag; `posts.isOwner` correctly identifies the real author and returns `false` for non-authors |
+| **`isAdminOrMod` privilege flag** | Admin users receive `isAdminOrMod: true` in topic page privileges; regular users receive `false` — the frontend uses this flag to decide whether to reveal the real author |
+| **Anonymous field roundtrip through API** | `anonymous: true` submitted at creation time is returned as `true` in both topic-creation and reply-creation responses |
+| **Anonymous defaults to `false`** | When `anonymous` is omitted, the stored and returned value is falsy for both topics and replies |
+| **Topic page API includes `anonymous` field** | Fetching `/api/topic/:slug` returns `anonymous: true` on the main post; `selfPost` is `false` for an admin viewing another user's post, `true` for the author; anonymous replies also carry the field |
+
+### `test/posts.js` -- `describe('anonymous flag')` (around line 803)
+
+These tests exercise the data-layer storage and summary pipeline:
+
+| Test | What is verified |
+|------|-----------------|
+| `anonymous: true` persists for replies and appears in API responses | The flag is stored in the database and surfaced through `posts.getPostField` and the post summary |
+| `anonymous: false` is the default for replies | Non-anonymous posts are not accidentally marked anonymous |
+
+**Why these tests are sufficient:** Together, the two test files verify every layer involved in the anonymous feature (HTTP request acceptance, database persistence, author identity preservation, privilege flag accuracy (`isAdminOrMod`, `selfPost`), API response shape (roundtrip), default behavior, and the topic-page response structure the frontend template) reads. The split between `anonymous-posts.js` (HTTP/API layer) and the `posts.js` unit tests (data layer) ensures both the integration path and the lower-level storage path are validated independently.
