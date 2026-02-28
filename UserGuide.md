@@ -53,3 +53,39 @@ As a regular user:
 - If a topic contains only private posts, you will see a message: "This topic contains only private posts. If this is unexpected behavior, please contact system administrator"
 - You will not be able to see any private content within that topic
 
+# Anonymous Posts User Guide
+
+## Overview
+
+Anonymous posts allow logged in users to create posts where their identity is hidden from other regular users. When marked as anonymous, other users will see just a "Anonymous" label and a generic icon instead of the author's real name and avatar. Only the post author as well as moderators and administrators can still see the real poster
+
+## Permissions
+
+Any logged-in user can create an anonymous post. There are no special permissions required. The following are the possible user states:
+- **The post author**: can always see their own identity on anonymous posts
+- **Moderators and administrators**: can always see the real author of anonymous posts
+- **Other regular users**: see "Anonymous" and generic icon in place of the author's name / avatar
+
+## Creation
+
+### When creating a post/response/etc
+1. At the bottom of the composer, you will see a checkbox labeled "Post anonymously"
+2. Check the "Post anonymously" checkbox to enable anonymous mode
+3. Write your topic title and content as normal
+5. Click "Post" / "Submit" to publish it anonymously
+
+## What is shown
+When viewing an anonymous post as a regular user (who is not the author), you will see:
+- A circular gray icon with a agent silhouette in place of the author's avatar
+- The name `Anonymous` displayed in place of the author's username
+- Author's profile link, group badges, and custom profile info are all hidden/disabled/regular text
+
+When viewing an anonymous post as the author or as a moderator/administrator, you will see:
+- The real author's avatar and username displayed as normal
+- The post otherwise functions like any other post
+
+## For topic listings / other pages showing personal info
+Anonymous posts are also reflected in topic list previews:
+- For **topic listings** (e.g., on a category page), if the topic's main post is anonymous, the author's avatar is replaced with the anonymous secret-agent icon
+- In **topic teasers** (the last reply preview shown beside a topic), if the latest reply is anonymous, the teaser shows the anonymous icon instead of the replier's avatar
+- For the **category "last post" previews**, anonymous posts display the anonymous icon in place of the poster's avatar
