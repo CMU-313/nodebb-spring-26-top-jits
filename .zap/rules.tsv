@@ -1,0 +1,4 @@
+10010	IGNORE	(Cookie No HttpOnly Flag)
+10011	IGNORE	(Cookie Without Secure Flag)
+10015	IGNORE	(Re-examine Cache-control Directives)
+10098	IGNORE	(Cross-Domain Misconfiguration)
