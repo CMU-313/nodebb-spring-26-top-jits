@@ -28,16 +28,15 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
-      - name: Verify checkout
-        run: ls -la package.json
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          cp install/package.json package.json
+          npm install
 
       - name: Setup NodeBB
         run: |
