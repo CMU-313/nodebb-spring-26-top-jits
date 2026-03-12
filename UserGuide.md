@@ -162,3 +162,66 @@ These tests exercise the data-layer storage and summary pipeline:
 | `anonymous: false` is the default for replies | Non-anonymous posts are not accidentally marked anonymous |
 
 **Why these tests are sufficient:** Together, the two test files verify every layer involved in the anonymous feature (HTTP request acceptance, database persistence, author identity preservation, privilege flag accuracy (`isAdminOrMod`, `selfPost`), API response shape (roundtrip), default behavior, and the topic-page response structure the frontend template) reads. The split between `anonymous-posts.js` (HTTP/API layer) and the `posts.js` unit tests (data layer) ensures both the integration path and the lower-level storage path are validated independently.
+
+---
+
+# Tools
+
+## Semgrep -- Static Analysis
+
+[Semgrep](https://github.com/semgrep/semgrep) is an open-source, lightweight static analysis tool that scans source code for security vulnerabilities, correctness bugs, and coding standard violations. It uses pattern-based rules that resemble the code they match, making rules easy to read and write without needing to understand abstract syntax trees or complex DSLs.
+
+### Why Semgrep?
+
+Semgrep was chosen over alternatives (e.g., CodeQL, SonarQube) for the following reasons:
+
+- **Zero project-specific configuration required** -- the community rulesets `p/javascript` and `p/nodejs` work out of the box against this codebase.
+- **No compilation or build step needed** -- Semgrep parses source files directly, unlike CodeQL which requires a build database.
+- **Fast execution** -- scanned 796 files with 74 rules in under 20 seconds locally.
+- **Easy CI integration** -- runs in a single Docker container step in GitHub Actions with no additional services or dependencies.
+
+### Pros
+
+| Pro | Evidence |
+|-----|----------|
+| Catches real security issues that ESLint misses | Found 24 findings including session cookie hardening gaps (`express-cookie-session-no-httponly`, `express-cookie-session-no-secure`), path traversal risks (`express-path-join-resolve-traversal`), and TLS verification bypass (`bypass-tls-verification`). ESLint does not have rules for these categories. |
+| Low false-positive rate | All 24 findings map to concrete, actionable code locations with clear explanations and remediation links. No findings were flagged on test code or generated files. |
+| Minimal setup overhead | No `.semgrep.yml` config file is required -- community rulesets are fetched from the registry at scan time. Installation is a single command (`brew install semgrep` or `pip install semgrep`). |
+| Complements existing ESLint workflow | ESLint focuses on code style and basic correctness; Semgrep focuses on security and deeper semantic patterns (e.g., taint tracking, data flow from `req.params` into `path.join`). The two tools cover non-overlapping concerns. |
+| Detailed, linked remediation guidance | Each finding includes a direct URL (e.g., `https://sg.run/weRn`) to documentation explaining the vulnerability and how to fix it. |
+
+### Cons
+
+| Con | Evidence |
+|-----|----------|
+| Not a native Node.js tool | Semgrep is written in OCaml/Python, so it cannot be installed via `npm`. Developers must install it separately via `brew`, `pip`, or `pipx`. This adds a local setup step not needed for ESLint. |
+| Community rules can be noisy for framework-specific patterns | Several session cookie findings (6 per `session()` call) flag configuration that NodeBB handles dynamically through `nconf` and `setupCookie()`. These are technically false positives in context but correct in isolation. |
+| No incremental/watch mode | Unlike ESLint (which integrates with `lint-staged` for pre-commit), Semgrep scans the full codebase each run. There is no built-in file-watcher or incremental mode for faster local feedback. |
+| Cross-function and cross-file analysis requires paid tier | The free Community Edition only analyzes within single files. Detecting vulnerabilities that span multiple files (e.g., user input flowing through a middleware chain) requires the paid Semgrep AppSec Platform. |
+| Rule coverage depends on community contributions | Unlike ESLint's well-established plugin ecosystem for Node.js, Semgrep's JavaScript/Node.js rulesets are smaller (74 rules total). Niche framework patterns may not be covered without writing custom rules. |
+
+### How to Run Locally
+
+```bash
+# Install (macOS)
+brew install semgrep
+
+# Install (Linux / WSL)
+pip install semgrep
+# or: pipx install semgrep
+
+# Run scan from the project root
+semgrep scan --config "p/javascript" --config "p/nodejs" .
+
+# Save results as JSON
+semgrep scan --config "p/javascript" --config "p/nodejs" --json --output semgrep-results.json .
+```
+
+### CI Integration
+
+Semgrep runs automatically on every push and pull request via the GitHub Actions workflow at `.github/workflows/semgrep.yml`. The workflow uses the official `semgrep/semgrep` Docker image, runs the `p/javascript` and `p/nodejs` rulesets, and uploads the JSON results as a downloadable artifact.
+
+### Evidence Artifacts
+
+- `semgrep-results.json` -- structured JSON output from the scan (24 findings across 7 files)
+- `semgrep-evidence.txt` -- human-readable terminal output showing all findings with code snippets, rule IDs, severity, and remediation links
