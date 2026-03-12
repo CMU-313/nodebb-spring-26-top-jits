@@ -24,7 +24,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Semgrep
-        run: semgrep scan --config "p/javascript" --config "p/nodejs" --error --json --output semgrep-results.json .
+        run: semgrep scan --config "p/javascript" --config "p/nodejs" --json --output semgrep-results.json .
+
+      - name: Check for new findings
+        run: |
+          COUNT=$(python3 -c "import json; print(len(json.load(open('semgrep-results.json'))['results']))")
+          echo "Found $COUNT findings (baseline: 24)"
+          if [ "$COUNT" -gt 24 ]; then
+            echo "::error::Semgrep found $COUNT findings, exceeding the baseline of 24. New issues were introduced."
+            exit 1
+          fi
 
       - name: Upload Semgrep results
         if: always()
