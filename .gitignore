@@ -72,7 +72,6 @@ package-lock.json
 *.mongodb
 
 # Flow
-.flow*
 flow-coverage-report/
 
 link-plugins.sh
