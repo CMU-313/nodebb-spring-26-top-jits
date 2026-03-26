@@ -143,6 +143,9 @@ get:
                                 sourceContent:
                                   type: string
                                   nullable: true
+                                translatedContent:
+                                  type: string
+                                  nullable: true
                                 timestampISO:
                                   type: string
                                   description: An ISO 8601 formatted date string (complementing `timestamp`)
@@ -190,6 +193,8 @@ get:
                                 modOnly:
                                   type: number
                                   description: Whether this post is only visible to admins and global moderators (0 or 1)
+                                isEnglish:
+                                  type: boolean
                             tags:
                               type: array
                               items:
