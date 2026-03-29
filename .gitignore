@@ -70,6 +70,10 @@ test/files/normalise-resized.jpg
 package-lock.json
 /package.json
 *.mongodb
+
+# Flow
+flow-coverage-report/
+
 link-plugins.sh
 test.sh
 
