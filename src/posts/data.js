@@ -4,12 +4,52 @@ const db = require('../database');
 const plugins = require('../plugins');
 const utils = require('../utils');
 const Posts = require('./index');
+const translate = require('../translate');
 
 const intFields = [
 	'uid', 'pid', 'tid', 'deleted', 'timestamp',
 	'upvotes', 'downvotes', 'deleterUid', 'edited',
 	'replies', 'bookmarks', 'announces', 'modOnly',
 ];
+
+// Global translation retry queue with limited concurrency to avoid server overload
+// Attached to global scope so all module instances share the same queue
+if (!global.translationRetryQueue) {
+	global.translationRetryQueue = {
+		queue: [],
+		processing: false,
+		concurrency: 1, // Process one translation at a time
+		async process() {
+			if (this.processing || this.queue.length === 0) {
+				return;
+			}
+			this.processing = true;
+			try {
+				while (this.queue.length > 0 && this.processing) {
+					const post = this.queue.shift();
+					try {
+						const [isEnglish, translatedContent, translationStatus] = await translate.retryTranslation({ content: post.content });
+						if (translationStatus) {
+							await db.updateObject(`post:${post.pid}`, {
+								isEnglish,
+								translatedContent,
+								translationStatus: true,
+							});
+						}
+					} catch (e) {
+						// Keep translationStatus as false if retry fails
+					}
+				}
+			} finally {
+				this.processing = false;
+			}
+		},
+		add(post) {
+			this.queue.push(post);
+			this.process();
+		},
+	};
+}
 
 module.exports = function (Posts) {
 	Posts.getPostsFields = async function (pids, fields) {
@@ -24,6 +64,7 @@ module.exports = function (Posts) {
 			fields: fields,
 		});
 		result.posts.forEach(post => modifyPost(post, fields));
+		retryFailedTranslations(result.posts);
 		return result.posts;
 	};
 
@@ -55,6 +96,16 @@ module.exports = function (Posts) {
 		plugins.hooks.fire('action:post.setFields', { data: { ...data, pid } });
 	};
 };
+
+function retryFailedTranslations(posts) {
+	const failedPosts = posts.filter(post => post && post.translationStatus === false);
+	if (failedPosts.length === 0) {
+		return;
+	}
+
+	// Queue translation retries for sequential processing
+	failedPosts.forEach(post => global.translationRetryQueue.add(post));
+}
 
 function modifyPost(post, fields) {
 	if (post) {
@@ -89,16 +140,6 @@ function modifyPost(post, fields) {
 
 		if (typeof post.postType === 'undefined' || post.postType === null) {
 			post.postType = Posts.DEFAULT_POST_TYPE;
-		}
-
-		if (post.hasOwnProperty('anonymous')) {
-			post.anonymous = post.anonymous === true || post.anonymous === 1 || post.anonymous === '1' || post.anonymous === 'true';
-		} else {
-			post.anonymous = false;
-		}
-		
-		if (typeof post.modOnly === 'undefined' || post.modOnly === null) {
-			post.modOnly = 0;
 		}
 
 		if (post.hasOwnProperty('anonymous')) {

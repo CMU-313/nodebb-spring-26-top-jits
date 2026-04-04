@@ -19,7 +19,7 @@ module.exports = function (Posts) {
 		const timestamp = data.timestamp || Date.now();
 		const isMain = data.isMain || false;
 		let hasAttachment = false;
-		const [isEnglish, translatedContent] = await translate.translate(data);
+		const [isEnglish, translatedContent, translationStatus] = await translate.translate(data);
 
 		if (!uid && parseInt(uid, 10) !== 0) {
 			throw new Error('[[error:invalid-uid]]');
@@ -31,6 +31,10 @@ module.exports = function (Posts) {
 
 		const pid = data.pid || await db.incrObjectField('global', 'nextPid');
 		let postData = { pid, uid, tid, content, sourceContent, timestamp, isEnglish, translatedContent};
+		// Store translation status separately for internal tracking
+		if (!translationStatus) {
+			await db.updateObject(`post:${pid}`, { translationStatus: false });
+		}
 		postData.postType = Posts.normalizePostType(data.postType);
 		postData.modOnly = data.modOnly ? 1 : 0;
 
