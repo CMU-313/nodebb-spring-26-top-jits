@@ -10,6 +10,7 @@ const groups = require('../groups');
 const activitypub = require('../activitypub');
 const utils = require('../utils');
 const translate = require('../translate');
+const translationQueue = require('../translation_queue');
 
 module.exports = function (Posts) {
 	Posts.create = async function (data) {
@@ -30,10 +31,11 @@ module.exports = function (Posts) {
 		}
 
 		const pid = data.pid || await db.incrObjectField('global', 'nextPid');
-		let postData = { pid, uid, tid, content, sourceContent, timestamp, isEnglish, translatedContent};
-		// Store translation status separately for internal tracking
+		let postData = { pid, uid, tid, content, sourceContent, timestamp, isEnglish, translatedContent, translationStatus};
+
+		// Add to retry queue if translation failed
 		if (!translationStatus) {
-			await db.updateObject(`post:${pid}`, { translationStatus: false });
+			await translationQueue.add(pid);
 		}
 		postData.postType = Posts.normalizePostType(data.postType);
 		postData.modOnly = data.modOnly ? 1 : 0;

@@ -15,20 +15,8 @@ translatorApi.translate = async function (postData) {
 		const data = await response.json();
 		const isEnglish = data.is_english;
 		const translatedContent = data.translated_content;
-		return [isEnglish, translatedContent, true];
-	} catch (e) {
-		return [true, postData.content, false];
-	}
-};
-
-translatorApi.retryTranslation = async function (postData) {
-	const TRANSLATOR_API = 'http://172.17.0.1:5000';
-	try {
-		const response = await fetch(TRANSLATOR_API + '/?content=' + encodeURIComponent(postData.content));
-		const data = await response.json();
-		const isEnglish = data.is_english;
-		const translatedContent = data.translated_content;
-		return [isEnglish, translatedContent, true];
+		const translationStatus = true;
+		return [isEnglish, translatedContent, translationStatus];
 	} catch (e) {
 		return [true, postData.content, false];
 	}
