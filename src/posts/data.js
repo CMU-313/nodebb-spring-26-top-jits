@@ -86,6 +86,10 @@ function modifyPost(post, fields) {
 		if (post.translatedContent === undefined) {
 			post.translatedContent = '';
 		}
+		// Normalize translationStatus to boolean
+		if (post.hasOwnProperty('translationStatus')) {
+			post.translationStatus = post.translationStatus === true || post.translationStatus === 'true';
+		}
 
 		if (typeof post.postType === 'undefined' || post.postType === null) {
 			post.postType = Posts.DEFAULT_POST_TYPE;

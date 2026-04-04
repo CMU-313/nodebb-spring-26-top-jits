@@ -13,8 +13,11 @@ translatorApi.translate = async function (postData) {
 	try {
 		const response = await fetch(TRANSLATOR_API + '/?content=' + encodeURIComponent(postData.content));
 		const data = await response.json();
-		return [data.is_english, data.translated_content];
+		const isEnglish = data.is_english;
+		const translatedContent = data.translated_content;
+		const translationStatus = true;
+		return [isEnglish, translatedContent, translationStatus];
 	} catch (e) {
-		return [true, postData.content];
+		return [true, postData.content, false];
 	}
 };

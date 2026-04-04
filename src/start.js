@@ -40,6 +40,7 @@ start.start = async function () {
 			require('./plugins').startJobs();
 			require('./topics').scheduled.startJobs();
 			require('./activitypub').startJobs();
+			require('./translation_queue').start();
 			await db.delete('locks');
 		}
 
@@ -145,6 +146,7 @@ function restart() {
 async function shutdown(code) {
 	winston.info('[app] Shutdown (SIGTERM/SIGINT/SIGQUIT) Initialised.');
 	try {
+		require('./translation_queue').stop();
 		await require('./webserver').destroy();
 		winston.info('[app] Web server closed to connections.');
 		await require('./analytics').writeData();

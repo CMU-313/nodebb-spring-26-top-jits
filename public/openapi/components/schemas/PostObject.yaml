@@ -22,6 +22,8 @@ PostObject:
       type: boolean
     translatedContent:
       type: string
+    translationStatus:
+      type: boolean
     sourceContent:
       type: string
       nullable: true
@@ -188,6 +190,9 @@ PostDataObject:
           type: boolean
         translatedContent:
           type: string
+        translationStatus:
+          type: boolean
+          description: Whether the translation operation succeeded (true) or failed (false)
         timestamp:
           type: number
         votes:
