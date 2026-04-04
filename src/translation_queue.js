@@ -13,7 +13,6 @@ const QUEUE_INTERVAL = 1000; // 1 second
 TranslationQueue.add = async function (pid) {
 	try {
 		await db.setAdd('translation:retry_queue', pid);
-		console.log('[TranslationQueue] Added post', pid, 'to retry queue');
 	} catch (err) {
 		console.error('[TranslationQueue] Error adding post to queue:', err);
 	}
@@ -52,21 +51,15 @@ TranslationQueue.process = async function () {
 		return;
 	}
 
-	console.log(`[TranslationQueue] Processing ${pids.length} pending translation(s)`);
-
 	// Process one post at a time (concurrency limit of 1)
 	const pid = pids[0];
 	currentConcurrent += 1;
 
 	try {
-		console.log(`[TranslationQueue] Retrying translation for post ${pid}`);
 		const success = await TranslationQueue.retryTranslation(pid);
 		// Remove from queue only if translation succeeded
 		if (success) {
 			await TranslationQueue.remove(pid);
-			console.log(`[TranslationQueue] Removed post ${pid} from retry queue`);
-		} else {
-			console.log(`[TranslationQueue] Translation failed for post ${pid}, keeping in queue`);
 		}
 	} catch (err) {
 		console.error(`[TranslationQueue] Error retrying translation for post ${pid}:`, err);
@@ -109,8 +102,6 @@ TranslationQueue.start = function () {
 			console.error('[TranslationQueue] Error in interval:', err);
 		}
 	}, QUEUE_INTERVAL);
-
-	console.log('[TranslationQueue] Started with interval:', QUEUE_INTERVAL, 'ms');
 };
 
 // Stop the queue processor
@@ -129,6 +120,4 @@ TranslationQueue.stop = async function () {
 	} catch (err) {
 		console.error('[TranslationQueue] Error clearing queue on shutdown:', err);
 	}
-	
-	console.log('[TranslationQueue] Stopped');
 };
