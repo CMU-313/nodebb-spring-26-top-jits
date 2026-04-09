@@ -25,10 +25,12 @@ export default defineConfig([
 			'*.ipr',
 			'*.iws',
 			'coverage/',
+			'flow-coverage-report/',
 			'build/',
 			'test/files/',
 			'*.min.js',
 			'install/docker/',
+			'.flowconfig',
 		],
 	},
 	// tests
